@@ -5,7 +5,7 @@ plugins {
 }
 
 // Backend URL: -PvpnApiBaseUrl=... or env VPN_API_BASE_URL (CI), otherwise gradle.properties
-val apiBase: String = System.getenv("VPN_API_BASE_URL")?.takeIf { it.isNotBlank() }
+val apiBase: String = "https://core.xnetify.ir"
     ?: (project.findProperty("vpnApiBaseUrl") as String?) ?: "https://core.xnetify.ir"
 
 android {
