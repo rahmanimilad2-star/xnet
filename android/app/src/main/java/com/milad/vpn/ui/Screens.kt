@@ -401,10 +401,6 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
         AnimatedVisibility(visible = vpn.phase == Phase.CONNECTED, enter = fadeIn(), exit = fadeOut()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard(if (english) "Download" else "دانلود", Format.speed(vpn.downSpeed), Icons.Filled.ArrowDownward, Ok, Modifier.weight(1f))
-                    StatCard(if (english) "Upload" else "آپلود", Format.speed(vpn.upSpeed), Icons.Filled.ArrowUpward, Brand, Modifier.weight(1f))
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     var tick by remember { mutableIntStateOf(0) }
                     LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
                     key(tick) {
