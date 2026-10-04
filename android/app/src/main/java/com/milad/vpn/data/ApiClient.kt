@@ -2,7 +2,7 @@ package com.milad.vpn.data
 
 import com.milad.vpn.BuildConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withContext\nimport android.util.Log
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -33,7 +33,8 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
             val resp = try {
                 http.newCall(rb.build()).execute()
             } catch (e: IOException) {
-                throw ApiException(0, "NETWORK", "اتصال به سرور برقرار نشد. اینترنت خود را بررسی کنید.")
+                Log.e("ApiClient", "Network request failed: ${rb.build().url}", e)
+                throw ApiException(0, "NETWORK", "اتصال به سرور برقرار نشد: ${e.javaClass.simpleName}")
             }
             resp.use {
                 val text = it.body?.string().orEmpty()
