@@ -359,9 +359,12 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     val country = ui.configs.firstOrNull { it.id == vpn.configId }?.country
         ?: ui.configs.firstOrNull { it.id == ui.selectedConfigId }?.country
 
+    // xnet-design-v1
+    val glow by animateColorAsState(look.color.copy(alpha = 0.22f), tween(700), label = "bgGlow")
     Column(
         Modifier
             .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(glow, Color.Transparent), endY = 1500f))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -370,7 +373,15 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
         // header
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(APP_TITLE, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                            .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+                    Spacer(Modifier.width(10.dp))
+                    Text(APP_TITLE, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                }
                 ui.account?.let { Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 13.sp) }
             }
             StatusPill(look.label, color, pulsing = vpn.phase == Phase.CONNECTING || vpn.phase == Phase.RECONNECTING)
@@ -388,11 +399,11 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
         Surface(
             shape = RoundedCornerShape(50),
             color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, Brush.linearGradient(listOf(color.copy(alpha = 0.75f), BrandDeep.copy(alpha = 0.45f)))),
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable { vibrate(chipCtx); onOpenServers() },
         ) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(flagOf(country), fontSize = 18.sp)
+            Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(flagOf(country), fontSize = 20.sp)
                 Spacer(Modifier.width(8.dp))
                 Text(serverName, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 220.dp))
                 Spacer(Modifier.width(6.dp))
@@ -457,6 +468,10 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
     Box(Modifier.size(250.dp), contentAlignment = Alignment.Center) {
         // ambient rings: expanding while connected/connecting
         Canvas(Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(listOf(c1.copy(alpha = 0.42f), c1.copy(alpha = 0.10f), Color.Transparent), center = center, radius = size.minDimension / 2f),
+                radius = size.minDimension / 2f,
+            )
             val r0 = size.minDimension / 2f * 0.62f
             if (phase != Phase.DISCONNECTED) {
                 for (i in 0..1) {
@@ -482,7 +497,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
                 .scale(scale)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(c1, c2)))
-                .border(4.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                .border(3.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))), CircleShape)
                 .clickable {
                     pressed = true
                     vibrate(context, strong = true)
@@ -490,6 +505,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
                 },
             contentAlignment = Alignment.Center,
         ) {
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.Transparent, Color.Black.copy(alpha = 0.10f)))))
             Icon(
                 Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
@@ -502,8 +518,11 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
 @Composable
 private fun StatCard(title: String, value: String, icon: ImageVector, tint: Color, modifier: Modifier) {
     Card(modifier, shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(tint.copy(alpha = 0.16f), Color.Transparent))).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha = 0.30f), tint.copy(alpha = 0.12f)))), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(10.dp))
