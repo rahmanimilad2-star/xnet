@@ -9,10 +9,6 @@ data class VpnStatus(
     val phase: Phase = Phase.DISCONNECTED,
     val configId: Long? = null,
     val configName: String? = null,
-    val upSpeed: Long = 0,      // bytes/s
-    val downSpeed: Long = 0,
-    val sessionUp: Long = 0,
-    val sessionDown: Long = 0,
     val connectedSince: Long? = null,
     val pingMs: Long? = null,
     val error: String? = null,

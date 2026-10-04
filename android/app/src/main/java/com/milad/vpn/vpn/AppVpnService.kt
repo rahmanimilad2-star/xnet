@@ -20,7 +20,6 @@ import com.milad.vpn.R
 import com.milad.vpn.data.ApiException
 import com.milad.vpn.data.Repository
 import com.milad.vpn.data.VpnConfig
-import com.milad.vpn.ui.Format
 import com.milad.vpn.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,15 +65,22 @@ class AppVpnService : VpnService() {
     private var current: VpnConfig? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var lostNetwork = false
+    private var lifecycleGeneration = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> { shutdown(null, null); return START_NOT_STICKY }
+            ACTION_STOP -> { lifecycleGeneration++; shutdown(null, null); return START_NOT_STICKY }
             ACTION_RELOAD -> { if (VpnState.status.value.phase != Phase.DISCONNECTED) connect(Repository.configsToTry()); return START_STICKY }
             else -> {
-                startAsForeground("در حال اتصال…")
-                registerNetworkCallback()
-                connect(Repository.configsToTry())
+                lifecycleGeneration++
+                try {
+                    startAsForeground("در حال اتصال…")
+                    registerNetworkCallback()
+                    connect(Repository.configsToTry())
+                } catch (e: Exception) {
+                    Log.e(TAG, "VPN service startup failed", e)
+                    shutdown("خطا در راه‌اندازی سرویس VPN: ${e.message ?: "نامشخص"}", "SERVICE_START_FAILED")
+                }
             }
         }
         return START_STICKY
@@ -82,6 +88,7 @@ class AppVpnService : VpnService() {
 
     // ------------------------------------------------------------------ connect + failover
     private fun connect(candidates: List<VpnConfig>, reconnect: Boolean = false) {
+        val generation = lifecycleGeneration
         connectJob?.cancel()
         connectJob = scope.launch {
             VpnState.update { it.copy(phase = if (reconnect) Phase.RECONNECTING else Phase.CONNECTING, error = null, stopCode = null) }
@@ -97,11 +104,15 @@ class AppVpnService : VpnService() {
 
             var lastError: String? = null
             for (cfg in list) {
-                if (!isActive) return@launch
+                if (!isActive || generation != lifecycleGeneration) return@launch
                 VpnState.update { it.copy(phase = if (reconnect) Phase.RECONNECTING else Phase.CONNECTING, configId = cfg.id, configName = cfg.name) }
                 updateNotification("در حال اتصال به ${cfg.name}…")
                 try {
                     startCore(cfg)
+                    if (!isActive || generation != lifecycleGeneration) {
+                        stopCore()
+                        return@launch
+                    }
                     val delayMs = XrayCore.measureDelay()
                     if (delayMs in 0..MAX_DELAY_MS) {
                         current = cfg
@@ -182,7 +193,7 @@ class AppVpnService : VpnService() {
         tun = null
     }
 
-    // -------------------------------------------------------------- live stats + periodic sync
+    // -------------------------------------------------------------- periodic account/config sync
     private fun startMonitor() {
         monitorJob?.cancel()
         monitorJob = scope.launch {
@@ -190,12 +201,6 @@ class AppVpnService : VpnService() {
             var lastConfigSync = System.currentTimeMillis()
             while (isActive) {
                 delay(1000)
-                val up = XrayCore.queryStats("proxy", "uplink")
-                val down = XrayCore.queryStats("proxy", "downlink")
-                VpnState.update { it.copy(upSpeed = up, downSpeed = down, sessionUp = it.sessionUp + up, sessionDown = it.sessionDown + down) }
-                if (VpnState.status.value.phase == Phase.CONNECTED) {
-                    updateNotification("متصل به ${current?.name} · ↓ ${Format.speed(down)} ↑ ${Format.speed(up)}")
-                }
 
                 val now = System.currentTimeMillis()
                 if (now - lastAccountCheck > ACCOUNT_CHECK_MS) {
@@ -239,7 +244,7 @@ class AppVpnService : VpnService() {
             override fun onLost(network: Network) {
                 lostNetwork = true
                 if (VpnState.status.value.phase == Phase.CONNECTED) {
-                    VpnState.update { it.copy(phase = Phase.RECONNECTING, upSpeed = 0, downSpeed = 0) }
+                    VpnState.update { it.copy(phase = Phase.RECONNECTING) }
                     updateNotification("اینترنت قطع شد؛ در انتظار اتصال مجدد…")
                 }
             }
@@ -253,6 +258,7 @@ class AppVpnService : VpnService() {
 
     // ------------------------------------------------------------------ stop + notification
     private fun shutdown(error: String?, code: String?) {
+        lifecycleGeneration++
         connectJob?.cancel(); monitorJob?.cancel()
         val last = current
         stopCore()

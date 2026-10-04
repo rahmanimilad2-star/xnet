@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Compose draws edge-to-edge and paints the whole window (light or dark) itself. -->
-    <style name="Theme.MiladVPN" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.Xnet" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#FF4F5BFF</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

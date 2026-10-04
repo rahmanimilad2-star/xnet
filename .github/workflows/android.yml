@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p app/libs
           if [ ! -f app/libs/libv2ray.aar ]; then
-            gh release download --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs
+            gh release download v26.9.30 --repo 2dust/AndroidLibXrayLite --pattern 'libv2ray.aar' --dir app/libs
           fi
           ls -la app/libs
 

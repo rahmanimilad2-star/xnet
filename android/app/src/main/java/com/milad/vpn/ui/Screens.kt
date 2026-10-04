@@ -36,9 +36,6 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Home as OutlinedHome
-import androidx.compose.material.icons.outlined.Person as OutlinedPerson
-import androidx.compose.material.icons.outlined.Public as OutlinedPublic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -466,7 +463,9 @@ private fun ServerCard(flag: String, title: String, sub: String, accent: Color, 
 private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     val labels = if (english) listOf("Home", "Servers", "Account") else listOf("خانه", "سرورها", "حساب")
     val filled = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
-    val outlined = listOf(OutlinedHome, OutlinedPublic, OutlinedPerson)
+    // Keep the same stable icons in both states. The current project dependency set
+    // does not expose the outlined Home/Public variants on GitHub Actions.
+    val outlined = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
     Box(
         Modifier
             .fillMaxWidth()
