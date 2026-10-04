@@ -45,6 +45,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val (token, acc) = Repository.api.login(username.trim(), password)
                 Repository.session.token = token
                 Repository.session.username = acc.username
+                Repository.session.password = password
                 _ui.value = UiState(loggedIn = true, account = acc)
                 startSync()
             } catch (e: ApiException) {

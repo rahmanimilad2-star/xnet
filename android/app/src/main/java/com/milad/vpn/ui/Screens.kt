@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -78,7 +79,7 @@ private val DarkBg = Color(0xFF0B0D12)
 private val DarkSurface = Color(0xFF151821)
 private val DarkSurface2 = Color(0xFF1D212D)
 
-private const val DEVELOPER_NAME = "milad"
+private const val DEVELOPER_NAME = "M.R"
 private const val APP_TITLE = "Xnet"
 
 private val CardShape = RoundedCornerShape(22.dp)
@@ -327,10 +328,11 @@ fun MainScaffold(
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }) { vm.toggle(onStartVpn) }
+                0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
                 1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null)
                 else -> AccountScreen(
                     acc = ui.account, english = english, darkMode = darkMode,
+                    password = remember(ui.account?.username) { com.milad.vpn.data.Repository.session.password },
                     onLanguageChange = onLanguageChange, onDarkModeChange = onDarkModeChange,
                     onRefresh = vm::refreshNow, onLogout = vm::logout,
                 )
@@ -350,7 +352,7 @@ private fun phaseLook(phase: Phase, english: Boolean): PhaseLook = when (phase) 
 }
 
 @Composable
-fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onToggle: () -> Unit) {
+fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onOpenAccount: () -> Unit = {}, onToggle: () -> Unit) {
     val look = phaseLook(vpn.phase, english)
     val color by animateColorAsState(look.color, tween(500), label = "phase")
     val serverName = if (ui.selectedConfigId < 0) {
@@ -424,7 +426,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             }
         }
 
-        ui.account?.let { UsageCard(it, english) }
+        ui.account?.let { SubscriptionStrip(it, english, onOpenAccount) }
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -534,100 +536,200 @@ private fun StatCard(title: String, value: String, icon: ImageVector, tint: Colo
     }
 }
 
-@Composable
-fun UsageCard(acc: Account, english: Boolean = false) {
-    if (!acc.usageKnown) { UnknownUsageCard(acc, english); return }
-    val p = if (!acc.unlimited && acc.quotaBytes > 0) (acc.usedBytes.toFloat() / acc.quotaBytes).coerceIn(0f, 1f) else 0f
-    val progress by animateFloatAsState(p, tween(800), label = "usage")
-    val barColor = when { p >= 0.9f -> Bad; p >= 0.7f -> Warn; else -> MaterialTheme.colorScheme.primary }
-    Card(Modifier.fillMaxWidth(), shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.DataUsage, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(if (english) "Subscription" else "اشتراک", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                if (!acc.unlimited) Text("${Format.num((p * 100).toInt())}%", color = barColor, fontWeight = FontWeight.Bold)
-            }
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(Format.bytes(acc.usedBytes), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "${if (english) "of" else "از"} ${if (acc.unlimited) (if (english) "Unlimited" else "نامحدود") else Format.bytes(acc.quotaBytes)}",
-                    color = muted(), fontSize = 14.sp, modifier = Modifier.padding(bottom = 3.dp),
-                )
-            }
-            if (!acc.unlimited) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(10.dp)),
-                    color = barColor,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = StrokeCap.Round,
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InfoTile(if (english) "Remaining" else "باقی‌مانده", if (acc.unlimited) "∞" else Format.bytes(acc.remainingBytes), Modifier.weight(1f))
-                InfoTile(
-                    if (english) "Days left" else "روز باقی‌مانده",
-                    acc.daysLeft?.let { Format.num(it) } ?: "∞",
-                    Modifier.weight(1f),
-                    valueColor = if ((acc.daysLeft ?: 99) <= 3) Bad else Color.Unspecified,
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Event, null, tint = muted(), modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("${if (english) "Expires" else "انقضا"}: ${Format.date(acc.expiresAt)}", color = muted(), fontSize = 13.sp)
-            }
-            acc.usageSyncedAt?.let {
-                Text("${if (english) "Updated" else "به‌روزرسانی آمار"}: ${Format.date(it)}", fontSize = 11.sp, color = muted())
-            }
-        }
-    }
+// ------------------------------------------------------------ subscription (xnet-subscription-v1)
+// All values come from the signed-in user's /account response; the password is the one this
+// device logged in with (encrypted in SessionStore). Nothing here is hard-coded.
+private fun planLabel(acc: Account, english: Boolean): String =
+    if (acc.unlimited || acc.quotaBytes <= 0) (if (english) "Unlimited" else "نامحدود")
+    else "${Format.bytes(acc.quotaBytes)} · ${if (english) "Data plan" else "حجمی"}"
+
+private fun statusColor(status: String): Color = when (status) {
+    "ACTIVE" -> Ok
+    "BLOCKED" -> Bad
+    else -> Warn
 }
 
-/** Configs without traffic data (manual / subscription): informational only, never blocks Connect. */
-@Composable
-private fun UnknownUsageCard(acc: Account, english: Boolean) {
-    Card(Modifier.fillMaxWidth(), shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.DataUsage, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(if (english) "Subscription" else "اشتراک", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, null, tint = muted(), modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (english) "Data usage unknown" else "حجم نامشخص", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-            }
-            Text(
-                if (english) "Usage isn't tracked for this server. You can connect normally." else "مصرف این سرور ثبت نمی‌شود. اتصال به‌طور کامل فعال است.",
-                color = muted(), fontSize = 13.sp,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InfoTile(
-                    if (english) "Days left" else "روز باقی‌مانده",
-                    acc.daysLeft?.let { Format.num(it) } ?: "∞",
-                    Modifier.weight(1f),
-                    valueColor = if ((acc.daysLeft ?: 99) <= 3) Bad else Color.Unspecified,
-                )
-                InfoTile(if (english) "Expires" else "انقضا", Format.date(acc.expiresAt), Modifier.weight(1f))
-            }
+private fun statusShort(status: String, english: Boolean): String = when (status) {
+    "ACTIVE" -> if (english) "Active" else "فعال"
+    "EXPIRED" -> if (english) "Expired" else "منقضی"
+    "QUOTA_EXCEEDED" -> if (english) "Limit reached" else "اتمام حجم"
+    "BLOCKED" -> if (english) "Blocked" else "مسدود"
+    else -> status
+}
+
+private fun expiryLine(acc: Account, english: Boolean): String {
+    if (acc.expiresAt == null) return if (english) "No expiry" else "بدون محدودیت زمانی"
+    val d = acc.daysLeft
+    val left = when {
+        d == null -> ""
+        acc.expiresAt < System.currentTimeMillis() -> if (english) " · expired" else " · منقضی شده"
+        d <= 0 -> if (english) " · ends today" else " · امروز تمام می‌شود"
+        else -> if (english) " · $d days left" else " · ${Format.num(d)} روز مانده"
+    }
+    return "${if (english) "Expires" else "انقضا"} ${Format.date(acc.expiresAt)}$left"
+}
+
+private fun copyToClipboard(context: Context, label: String, text: String, sensitive: Boolean, english: Boolean) {
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager ?: return
+    val clip = android.content.ClipData.newPlainText(label, text)
+    if (sensitive) {
+        clip.description.extras = android.os.PersistableBundle().apply {
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
         }
+    }
+    cm.setPrimaryClip(clip)
+    // Android 13+ shows its own copy confirmation.
+    if (Build.VERSION.SDK_INT < 33) {
+        android.widget.Toast.makeText(context, if (english) "Copied" else "کپی شد", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 
 @Composable
-private fun InfoTile(title: String, value: String, modifier: Modifier, valueColor: Color = Color.Unspecified) {
-    Column(
-        modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(12.dp),
+private fun StatusChip(status: String, english: Boolean, onDark: Boolean = false) {
+    val c = statusColor(status)
+    Surface(
+        color = if (onDark) Color.White.copy(alpha = 0.18f) else c.copy(alpha = 0.14f),
+        shape = RoundedCornerShape(50),
     ) {
-        Text(title, fontSize = 12.sp, color = muted())
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = valueColor)
+        Row(Modifier.padding(horizontal = 11.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(c))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                statusShort(status, english), fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = if (onDark) Color.White else c,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    valueColor: Color = Color.Unspecified,
+    ltr: Boolean = false,
+    mono: Boolean = false,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, fontSize = 12.sp, color = muted())
+            Text(
+                value,
+                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = valueColor,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                fontFamily = if (mono) androidx.compose.ui.text.font.FontFamily.Monospace else null,
+                style = if (ltr) androidx.compose.ui.text.TextStyle(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr)
+                        else androidx.compose.ui.text.TextStyle.Default,
+            )
+        }
+        if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, content = trailing)
+    }
+}
+
+/** Account: one intentional block replacing the old profile header + traffic cards. */
+@Composable
+fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
+    val context = LocalContext.current
+    var reveal by rememberSaveable { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth(), shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+        // header: identity + status
+        Row(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(Brand, BrandDeep)))
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(46.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                Text(acc.username.take(1).uppercase(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (english) "Subscription details" else "مشخصات اشتراک", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(statusText(acc.status, english), color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+            }
+            StatusChip(acc.status, english, onDark = true)
+        }
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+            DetailRow(Icons.Filled.Person, if (english) "User ID" else "شناسه کاربری", acc.username, ltr = true) {
+                IconButton(onClick = { vibrate(context); copyToClipboard(context, "username", acc.username, false, english) }) {
+                    Icon(Icons.Filled.ContentCopy, if (english) "Copy" else "کپی", tint = muted(), modifier = Modifier.size(18.dp))
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            if (password != null) {
+                DetailRow(
+                    Icons.Filled.Key, if (english) "Password" else "رمز عبور",
+                    if (reveal) password else "••••••••", ltr = true, mono = reveal,
+                ) {
+                    if (reveal) {
+                        IconButton(onClick = { vibrate(context); copyToClipboard(context, "password", password, true, english) }) {
+                            Icon(Icons.Filled.ContentCopy, if (english) "Copy" else "کپی", tint = muted(), modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    IconButton(onClick = { vibrate(context); reveal = !reveal }) {
+                        Icon(
+                            if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            if (reveal) (if (english) "Hide" else "پنهان") else (if (english) "Show" else "نمایش"),
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            } else {
+                DetailRow(
+                    Icons.Filled.Key, if (english) "Password" else "رمز عبور",
+                    if (english) "Sign in again once to view" else "برای نمایش، یک‌بار دوباره وارد شوید",
+                    valueColor = muted(),
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            DetailRow(Icons.Filled.WorkspacePremium, if (english) "Plan" else "پلن", planLabel(acc, english))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            DetailRow(
+                Icons.Filled.Event, if (english) "Validity" else "اعتبار", expiryLine(acc, english),
+                valueColor = if (acc.expiresAt != null && (acc.daysLeft ?: 99) <= 3) Bad else Color.Unspecified,
+            )
+        }
+    }
+}
+
+/** Home: slim summary row (no credentials). Tap opens Account. */
+@Composable
+fun SubscriptionStrip(acc: Account, english: Boolean, onOpen: () -> Unit) {
+    val context = LocalContext.current
+    Card(
+        Modifier.fillMaxWidth().clip(CardShape).clickable { vibrate(context); onOpen() },
+        shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Filled.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(planLabel(acc, english), fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    expiryLine(acc, english), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = if (acc.expiresAt != null && (acc.daysLeft ?: 99) <= 3) Bad else muted(),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            StatusChip(acc.status, english)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = muted(),
+                modifier = Modifier.padding(start = 4.dp).size(20.dp),
+            )
+        }
     }
 }
 
@@ -736,6 +838,7 @@ fun AccountScreen(
     onDarkModeChange: (Boolean) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    password: String? = null,
 ) {
     var confirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -748,42 +851,7 @@ fun AccountScreen(
         item { Text(if (english) "Account" else "حساب کاربری", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold) }
 
         if (acc != null) {
-            item {
-                // profile header
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(CardShape)
-                        .background(Brush.linearGradient(listOf(Brand, BrandDeep)))
-                        .padding(18.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
-                            Text(acc.username.take(1).uppercase(), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(acc.username, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text(statusText(acc.status, english), color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
-                        }
-                        Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(50)) {
-                            Text(
-                                if (acc.isActive) (if (english) "Active" else "فعال") else "!",
-                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                            )
-                        }
-                    }
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val unknown = if (english) "Unknown" else "نامشخص"
-                    StatCard(if (english) "Downloaded" else "دانلود", if (acc.usageKnown) Format.bytes(acc.downloadBytes) else unknown, Icons.Filled.ArrowDownward, Ok, Modifier.weight(1f))
-                    StatCard(if (english) "Uploaded" else "آپلود", if (acc.usageKnown) Format.bytes(acc.uploadBytes) else unknown, Icons.Filled.ArrowUpward, Brand, Modifier.weight(1f))
-                }
-            }
-            item { UsageCard(acc, english) }
+            item { SubscriptionPanel(acc, password, english) }
         }
 
         item {

@@ -9,7 +9,8 @@ import org.json.JSONObject
 
 /**
  * Encrypted on-device storage (AES-256, key in Android Keystore).
- * Only the session token is stored – never the password. Configs are cached encrypted so a
+ * Stores the session token and (for the in-app Subscription Details view) the user's own login
+ * password, both encrypted with AES-256 (Android Keystore); wiped on sign-out. Configs are cached encrypted so a
  * reconnect works even if the backend is briefly unreachable.
  */
 class SessionStore(context: Context) {
@@ -28,6 +29,11 @@ class SessionStore(context: Context) {
     var username: String?
         get() = prefs.getString("username", null)
         set(v) = prefs.edit().putString("username", v).apply()
+
+    /** Login password, encrypted at rest; shown only on demand in Account (hidden by default). */
+    var password: String?
+        get() = prefs.getString("password", null)
+        set(v) = prefs.edit().putString("password", v).apply()
 
     /** -1 = automatic (priority order + failover) */
     var selectedConfigId: Long
