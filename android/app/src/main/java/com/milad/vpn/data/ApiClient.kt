@@ -1,3 +1,4 @@
+import android.util.Log
 package com.milad.vpn.data
 
 import com.milad.vpn.BuildConfig
