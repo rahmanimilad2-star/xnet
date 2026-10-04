@@ -85,7 +85,7 @@ private const val DEVELOPER_NAME = "M.R"
 private const val SUPPORT_TELEGRAM = "@rahmani208"
 private const val APP_TITLE = "Xnet"
 
-private val CardShape = RoundedCornerShape(22.dp)
+private val CardShape = RoundedCornerShape(20.dp)
 
 // ---------------------------------------------------------------------------------- haptics
 private var lastVibrationAt = 0L
@@ -133,16 +133,16 @@ fun AppTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
             primary = Brand,
             onPrimary = Color.White,
             secondary = BrandDeep,
-            background = LightBg,
+            background = Color(0xFFEEF1F8),
             onBackground = Color(0xFF151827),
-            surface = Color.White,
+            surface = Color(0xFFF9FAFD),
             onSurface = Color(0xFF151827),
-            surfaceVariant = Color(0xFFEEF0F7),
+            surfaceVariant = Color(0xFFE6EAF3),
             onSurfaceVariant = Color(0xFF6B7287),
             outline = Color(0xFFDDE1EC),
             outlineVariant = Color(0xFFE9ECF3),
-            surfaceContainer = Color.White,
-            surfaceContainerHigh = Color(0xFFF7F8FC),
+            surfaceContainer = Color(0xFFF5F7FB),
+            surfaceContainerHigh = Color(0xFFEFF2F8),
         )
     }
     MaterialTheme(colorScheme = colors) {
@@ -470,41 +470,56 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-            shadowElevation = 6.dp,
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)),
+            shadowElevation = 10.dp,
         ) {
-            Row(Modifier.height(64.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.height(68.dp).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 labels.forEachIndexed { i, label ->
                     val sel = tab == i
-                    val tint by animateColorAsState(if (sel) MaterialTheme.colorScheme.primary else muted(), tween(180), label = "navTint")
+                    val tint by animateColorAsState(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(220), label = "navTint")
                     val pill by animateColorAsState(
-                        if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else Color.Transparent, tween(180), label = "navPill",
+                        if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent, tween(220), label = "navPill",
                     )
                     Column(
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .padding(vertical = 4.dp)
                             .clip(RoundedCornerShape(18.dp))
                             .selectable(selected = sel, role = Role.Tab, onClick = { onSelect(i) }),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Box(
-                            Modifier.size(width = 52.dp, height = 30.dp).clip(RoundedCornerShape(50)).background(pill),
+                            Modifier
+                                .size(width = 56.dp, height = 32.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(pill),
                             contentAlignment = Alignment.Center,
-                        ) { Icon(if (sel) filled[i] else outlined[i], contentDescription = null, tint = tint, modifier = Modifier.size(22.dp)) }
-                        Spacer(Modifier.height(3.dp))
-                        Text(label, color = tint, fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+                        ) {
+                            Icon(
+                                if (sel) filled[i] else outlined[i],
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(if (sel) 24.dp else 21.dp),
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            label,
+                            color = tint,
+                            fontSize = 11.sp,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                        )
                     }
                 }
             }
@@ -917,18 +932,36 @@ fun AccountScreen(
     val context = LocalContext.current
 
     LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.background,
+                    ),
+                ),
+            ),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { Text(if (english) "Account" else "حساب کاربری", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold) }
-
         if (acc != null) {
+            item { AccountHero(acc, english) }
+            item { AccountSectionTitle(if (english) "Subscription" else "اشتراک") }
             item { SubscriptionPanel(acc, password, english) }
+        } else {
+            item {
+                Text(
+                    if (english) "Account" else "حساب کاربری",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
 
         item {
-            SettingsCard {
+            AccountSectionTitle(if (english) "Preferences" else "تنظیمات")
+            AccountSettingsCard {
                 SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک") {
                     Switch(checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) })
                 }
@@ -942,17 +975,14 @@ fun AccountScreen(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(icon = Icons.Filled.Code, title = if (english) "Developer" else "توسعه‌دهنده") {
-                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
-                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-                        Text(
-                            SUPPORT_TELEGRAM,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { uriHandler.openUri("https://t.me/rahmani208") },
-                        )
-                    }
+                    Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        item {
+            AccountSectionTitle(if (english) "Support" else "پشتیبانی")
+            SupportCard()
         }
 
         item {
@@ -960,10 +990,17 @@ fun AccountScreen(
                 onClick = { vibrate(context); onRefresh() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
             ) {
                 Icon(Icons.Filled.Refresh, null)
                 Spacer(Modifier.width(8.dp))
-                Text(if (english) "Refresh" else "به‌روزرسانی اطلاعات")
+                Text(if (english) "Refresh account" else "به‌روزرسانی حساب", fontWeight = FontWeight.SemiBold)
             }
         }
         item {
@@ -971,7 +1008,10 @@ fun AccountScreen(
                 onClick = { vibrate(context); confirm = true },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Bad.copy(alpha = 0.12f), contentColor = Bad),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Bad.copy(alpha = 0.12f),
+                    contentColor = Bad,
+                ),
                 elevation = null,
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, null)
@@ -1006,19 +1046,145 @@ fun AccountScreen(
     }
 }
 
+@Composable
+private fun AccountHero(acc: Account, english: Boolean) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+        ),
+        shadowElevation = 4.dp,
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            BrandDeep.copy(alpha = 0.10f),
+                        ),
+                    ),
+                )
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(58.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    acc.username.take(1).uppercase(),
+                    color = Color.White,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    if (english) "Your account" else "حساب کاربری شما",
+                    color = muted(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    acc.username,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(statusText(acc.status, english), color = statusColor(acc.status), fontSize = 13.sp)
+            }
+            StatusChip(acc.status, english)
+        }
+    }
+}
+
+@Composable
+private fun AccountSectionTitle(title: String) {
+    Text(
+        title.uppercase(),
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+        color = muted(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.8.sp,
+    )
+}
+
+@Composable
+private fun AccountSettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 2.dp,
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 7.dp), content = content)
+    }
+}
+
+@Composable
+private fun SupportCard() {
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { uriHandler.openUri("https://t.me/rahmani208") },
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+        ),
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Send, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    if (english) "Contact support" else "ارتباط با پشتیبانی",
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    SUPPORT_TELEGRAM,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = muted())
+        }
+    }
+}
+
 private fun statusText(status: String, english: Boolean): String = when (status) {
     "ACTIVE" -> if (english) "Subscription active" else "اشتراک فعال"
     "EXPIRED" -> if (english) "Subscription expired" else "اشتراک منقضی شده"
     "QUOTA_EXCEEDED" -> if (english) "Data limit reached" else "حجم تمام شده"
     "BLOCKED" -> if (english) "Account blocked" else "حساب مسدود است"
     else -> status
-}
-
-@Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), content = content)
-    }
 }
 
 @Composable
