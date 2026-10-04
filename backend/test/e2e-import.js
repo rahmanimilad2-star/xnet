@@ -1,0 +1,60 @@
+'use strict';
+// Browser E2E: paste configs from any source (no panel API) -> preview -> save -> app API serves them.
+process.env.JWT_SECRET = 'e2e3_secret_'.padEnd(64, 'w');
+process.env.DATA_ENC_KEY = '1'.repeat(64);
+process.env.STATS_INTERVAL_SECONDS = '0';
+process.env.SUBSCRIPTION_REFRESH_MINUTES = '0';
+process.env.ENV_FILE = '/nonexistent';
+const assert = require('node:assert/strict');
+const { chromium } = require(process.env.PW_PATH || 'playwright');
+const { openDb, getDb } = require('../src/db');
+openDb(':memory:');
+const { hashPassword } = require('../src/security');
+const { createServer } = require('../src/app');
+const SHOTS = process.env.SHOTS || '/tmp';
+const VLESS = 'vless://a3482e88-686a-4a58-8126-99c9df64b7bf@1.2.3.4:443?type=tcp&security=reality&pbk=abc123&sni=www.speedtest.net&fp=chrome&flow=xtls-rprx-vision#Pasted%20NL';
+const TROJAN = 'trojan://pw@tr.example.org:443?security=tls&type=ws&path=%2Ft&sni=tr.example.org#Pasted%20TR';
+
+(async () => {
+  getDb().prepare('INSERT INTO admins(username,password_hash,created_at) VALUES (?,?,?)').run('admin', hashPassword('AdminPass123!'), Date.now());
+  const server = createServer({ log: () => {} });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'fa-IR' });
+  const errs = []; page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  const step = (s) => console.log('✓', s);
+  await page.goto(base);
+  await page.fill('#login-form [name=username]', 'admin'); await page.fill('#login-form [name=password]', 'AdminPass123!');
+  await page.click('#login-form button'); await page.waitForSelector('.stats');
+  await page.click('#sidebar a[data-page=users]'); await page.click('#add-user');
+  await page.fill('#modal-body [name=username]', 'nima'); await page.fill('#modal-body [name=password]', 'nimapass1');
+  await page.fill('#modal-body [name=quota_gb]', '0'); await page.click('#modal-body [type=submit]');
+  await page.waitForSelector('#users-body td:has-text("nima")');
+
+  await page.click('#sidebar a[data-page=configs]'); await page.click('#import-cfg');
+  await page.fill('#modal-body [name=text]', [VLESS, 'vmess://notbase64!!', TROJAN].join('\n'));
+  await page.click('#import-check');
+  await page.waitForSelector('#import-sum:has-text("۲ معتبر")');
+  const prev = await page.textContent('#import-preview');
+  for (const s of ['1.2.3.4', 'reality', 'xtls-rprx-vision', 'tr.example.org', 'ws', 'نامعتبر']) assert.ok(prev.includes(s), `preview has ${s}`);
+  step('preview shows protocol/server/port/security/flow + clear error for the bad line');
+  await page.screenshot({ path: `${SHOTS}/import-preview.png`, fullPage: true });
+  await page.click('#modal-body [type=submit]');
+  await page.waitForSelector('#toast:has-text("۲ کانفیگ")'); step('valid ones saved, invalid one reported');
+  await page.click('#modal-close'); await page.click('#sidebar a[data-page=dashboard]'); await page.click('#sidebar a[data-page=configs]');
+  await page.waitForSelector('#cfg-body td:has-text("Pasted NL")');
+  assert.ok((await page.textContent('#cfg-body')).includes('دستی')); step('configs listed with source «دستی»');
+  await page.screenshot({ path: `${SHOTS}/import-list.png` });
+
+  let r = await fetch(`${base}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'nima', password: 'nimapass1' }) });
+  const { token, account } = await r.json();
+  assert.equal(account.usage_known, false);
+  r = await fetch(`${base}/api/v1/configs`, { headers: { Authorization: `Bearer ${token}` } });
+  const j = await r.json();
+  assert.deepEqual(j.configs.map((c) => c.name), ['Pasted NL', 'Pasted TR']);
+  step('app receives the pasted configs; usage_known=false (app shows «حجم نامشخص»)');
+  assert.deepEqual(errs.filter((e) => /Content Security Policy|Refused/.test(e)), []); step('no CSP errors');
+  await browser.close(); server.close();
+  console.log('E2E IMPORT: ALL PASSED');
+})().catch((e) => { console.error('E2E FAILED:', e); process.exit(1); });

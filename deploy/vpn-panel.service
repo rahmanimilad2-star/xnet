@@ -1,0 +1,28 @@
+[Unit]
+Description=VPN panel backend (Node.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vpnpanel
+Group=vpnpanel
+WorkingDirectory=/opt/vpn-panel/backend
+EnvironmentFile=/etc/vpn-panel/env
+Environment=ENV_FILE=/etc/vpn-panel/env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
+Restart=on-failure
+RestartSec=3
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/vpn-panel
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

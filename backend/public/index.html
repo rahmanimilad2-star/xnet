@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>پنل مدیریت VPN</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="login-view" class="center hidden">
+  <form id="login-form" class="card login-card">
+    <div class="logo">🛡️</div>
+    <h1>ورود مدیر</h1>
+    <label>نام کاربری<input name="username" autocomplete="username" required></label>
+    <label>رمز عبور<input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="error" id="login-error"></p>
+    <button class="btn primary block" type="submit">ورود</button>
+  </form>
+</div>
+
+<div id="app-view" class="hidden">
+  <header class="topbar">
+    <button class="icon-btn" id="menu-toggle" aria-label="منو">☰</button>
+    <strong>پنل مدیریت VPN</strong>
+    <span class="spacer"></span>
+    <span id="admin-name" class="muted"></span>
+    <button class="btn ghost" id="logout-btn">خروج</button>
+  </header>
+  <div class="layout">
+    <nav id="sidebar">
+      <a data-page="dashboard" class="active"><span class="ic">📊</span><span class="lb">داشبورد</span></a>
+      <a data-page="users"><span class="ic">👤</span><span class="lb">کاربران</span></a>
+      <a data-page="configs"><span class="ic">🔗</span><span class="lb">کانفیگ‌ها</span></a>
+      <a data-page="groups"><span class="ic">👥</span><span class="lb">گروه‌ها</span></a>
+      <a data-page="servers"><span class="ic">🖥️</span><span class="lb">سرورها</span></a>
+      <a data-page="audit"><span class="ic">📝</span><span class="lb">رویدادها</span></a>
+      <a data-page="settings"><span class="ic">⚙️</span><span class="lb">تنظیمات</span></a>
+    </nav>
+    <main id="page"></main>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modal-title"></h3><button class="icon-btn" id="modal-close" aria-label="بستن">✕</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>

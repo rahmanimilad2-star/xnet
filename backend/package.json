@@ -1,0 +1,14 @@
+{
+  "name": "vpn-panel-backend",
+  "version": "1.0.0",
+  "description": "Backend + admin panel for the VPN app (zero external dependencies)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "create-admin": "node --disable-warning=ExperimentalWarning src/cli.js create-admin",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "license": "UNLICENSED"
+}
