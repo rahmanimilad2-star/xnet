@@ -92,6 +92,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun selectConfig(id: Long) {
+        if (Repository.session.selectedConfigId == id) return
         Repository.session.selectedConfigId = id
         _ui.value = _ui.value.copy(selectedConfigId = id)
         if (vpn.value.phase != Phase.DISCONNECTED) AppVpnService.reload(getApplication())

@@ -353,7 +353,9 @@ private fun phaseLook(phase: Phase, english: Boolean): PhaseLook = when (phase) 
 fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onToggle: () -> Unit) {
     val look = phaseLook(vpn.phase, english)
     val color by animateColorAsState(look.color, tween(500), label = "phase")
-    val serverName = vpn.configName ?: autoLabel(ui, english)
+    val serverName = if (ui.selectedConfigId < 0) {
+        if (english) "Auto" else "خودکار"
+    } else ui.configs.firstOrNull { it.id == ui.selectedConfigId }?.name ?: autoLabel(ui, english)
     val country = ui.configs.firstOrNull { it.id == vpn.configId }?.country
         ?: ui.configs.firstOrNull { it.id == ui.selectedConfigId }?.country
 
@@ -780,7 +782,12 @@ fun AccountScreen(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(icon = Icons.Filled.Code, title = if (english) "Developer" else "توسعه‌دهنده") {
-                    Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                        Text("@rahmani208", color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { uriHandler.openUri("https://t.me/rahmani208") })
+                    }
                 }
             }
         }

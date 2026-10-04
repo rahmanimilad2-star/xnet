@@ -22,6 +22,11 @@ import com.milad.vpn.data.Repository
 import com.milad.vpn.data.VpnConfig
 import com.milad.vpn.ui.Format
 import com.milad.vpn.ui.MainActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import android.net.NetworkRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -61,6 +66,9 @@ class AppVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var tun: ParcelFileDescriptor? = null
+    private val connectionMutex = Mutex()
+    private var reconnectJob: Job? = null
+    private var underlyingNetwork: Network? = null
     private var connectJob: Job? = null
     private var monitorJob: Job? = null
     private var current: VpnConfig? = null
@@ -81,9 +89,20 @@ class AppVpnService : VpnService() {
     }
 
     // ------------------------------------------------------------------ connect + failover
+    @Synchronized
     private fun connect(candidates: List<VpnConfig>, reconnect: Boolean = false) {
-        connectJob?.cancel()
+        reconnectJob?.cancel()
+        reconnectJob = null
+        val previous = connectJob
+        val previousMonitor = monitorJob
+        previous?.cancel()
+        previousMonitor?.cancel()
+        monitorJob = null
         connectJob = scope.launch {
+            previous?.join()
+            previousMonitor?.join()
+            connectionMutex.withLock {
+            ensureActive()
             VpnState.update { it.copy(phase = if (reconnect) Phase.RECONNECTING else Phase.CONNECTING, error = null, stopCode = null) }
             // Connecting never waits on a remote panel: if configs are cached we start the core right away
             // and refresh from our backend in the background. Only with an empty cache (first run) do we fetch first.
@@ -103,6 +122,7 @@ class AppVpnService : VpnService() {
                 try {
                     startCore(cfg)
                     val delayMs = XrayCore.measureDelay()
+                    ensureActive()
                     if (delayMs in 0..MAX_DELAY_MS) {
                         current = cfg
                         VpnState.update {
@@ -114,7 +134,10 @@ class AppVpnService : VpnService() {
                         return@launch
                     }
                     lastError = "سرور ${cfg.name} پاسخ نداد"
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
+                    ensureActive()
                     Log.w(TAG, "config ${cfg.id} failed", e)
                     lastError = "خطا در اتصال به ${cfg.name}: ${e.message ?: "نامشخص"}"
                 }
@@ -123,6 +146,7 @@ class AppVpnService : VpnService() {
                 stopCore()
             }
             shutdown(lastError ?: "اتصال به هیچ سروری برقرار نشد.", null)
+            }
         }
     }
 
@@ -194,7 +218,7 @@ class AppVpnService : VpnService() {
                 val down = XrayCore.queryStats("proxy", "downlink")
                 VpnState.update { it.copy(upSpeed = up, downSpeed = down, sessionUp = it.sessionUp + up, sessionDown = it.sessionDown + down) }
                 if (VpnState.status.value.phase == Phase.CONNECTED) {
-                    updateNotification("متصل به ${current?.name} · ↓ ${Format.speed(down)} ↑ ${Format.speed(up)}")
+                    updateNotification("متصل به ${current?.name}")
                 }
 
                 val now = System.currentTimeMillis()
@@ -230,13 +254,21 @@ class AppVpnService : VpnService() {
         val cm = getSystemService(ConnectivityManager::class.java)
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
+                underlyingNetwork = network
                 setUnderlyingNetworks(arrayOf(network))
                 if (lostNetwork && VpnState.status.value.phase != Phase.DISCONNECTED) {
                     lostNetwork = false
-                    scope.launch { delay(1500); connect(Repository.configsToTry(), reconnect = true) }
+                    reconnectJob?.cancel()
+                    reconnectJob = scope.launch {
+                        delay(1500)
+                        reconnectJob = null
+                        if (VpnState.status.value.phase != Phase.DISCONNECTED) connect(Repository.configsToTry(), reconnect = true)
+                    }
                 }
             }
             override fun onLost(network: Network) {
+                if (network != underlyingNetwork) return
+                underlyingNetwork = null
                 lostNetwork = true
                 if (VpnState.status.value.phase == Phase.CONNECTED) {
                     VpnState.update { it.copy(phase = Phase.RECONNECTING, upSpeed = 0, downSpeed = 0) }
@@ -244,15 +276,20 @@ class AppVpnService : VpnService() {
                 }
             }
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) setUnderlyingNetworks(arrayOf(network))
+                if (network == underlyingNetwork && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) setUnderlyingNetworks(arrayOf(network))
             }
         }
-        cm.registerDefaultNetworkCallback(cb)
+        cm.registerNetworkCallback(NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build(), cb)
         networkCallback = cb
     }
 
     // ------------------------------------------------------------------ stop + notification
     private fun shutdown(error: String?, code: String?) {
+        reconnectJob?.cancel(); reconnectJob = null
+        lostNetwork = false; underlyingNetwork = null
         connectJob?.cancel(); monitorJob?.cancel()
         val last = current
         stopCore()
