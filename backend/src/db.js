@@ -137,6 +137,18 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   updated_at   INTEGER NOT NULL
 );
 
+-- One active app session per user (single device). Only a SHA-256 of the session id is stored.
+CREATE TABLE IF NOT EXISTS user_sessions (
+  user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  sid_hash      TEXT NOT NULL,
+  token_version INTEGER NOT NULL,
+  created_at    INTEGER NOT NULL,
+  expires_at    INTEGER NOT NULL,
+  last_seen_at  INTEGER,
+  ip            TEXT,
+  user_agent    TEXT
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   actor      TEXT NOT NULL,
@@ -166,6 +178,8 @@ function migrate(d) {
   const uc = cols('users');
   if (!uc.includes('provision_error')) d.exec('ALTER TABLE users ADD COLUMN provision_error TEXT');
   d.prepare('UPDATE schema_version SET version = 4 WHERE version < 4').run();
+  // v5: user_sessions (created by SCHEMA above, CREATE TABLE IF NOT EXISTS)
+  d.prepare('UPDATE schema_version SET version = 5 WHERE version < 5').run();
 }
 
 let db;
@@ -173,6 +187,7 @@ function openDb(file) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA busy_timeout = 5000;'); // wait for a concurrent writer instead of failing
   db.exec(SCHEMA);
   const v = db.prepare('SELECT version FROM schema_version').get();
   if (!v) db.prepare('INSERT INTO schema_version(version) VALUES (1)').run();

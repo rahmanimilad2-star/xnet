@@ -46,7 +46,7 @@ const SHOTS = process.env.SHOTS || '/tmp';
   await page.fill('#modal-body [name=name]', 'NL-1'); await page.fill('#modal-body [name=xui_url]', xui.url);
   await page.fill('#modal-body [name=xui_username]', 'xadmin'); await page.fill('#modal-body [name=xui_password]', 'xpass');
   await page.click('#modal-body [type=submit]');
-  await page.waitForSelector('#s-body td:has-text("NL-1")'); step('3X-UI server added');
+  await page.waitForSelector('#s-body .server-card:has-text("NL-1")'); step('3X-UI server added');
 
   // user
   await page.click('[data-page=users]'); await page.click('#add-user');
@@ -75,9 +75,19 @@ const SHOTS = process.env.SHOTS || '/tmp';
   await page.fill('#modal-body [name=name]', 'Sub-1'); await page.fill('#modal-body [name=url]', `http://127.0.0.1:${subSrv.address().port}/sub/x`);
   await page.selectOption('#modal-body [name=scope]', 'users'); await page.check('#modal-body [name=user_ids]');
   await page.click('#modal-body [type=submit]');
-  await page.waitForSelector('#sub-body td:has-text("Sub-1")'); await page.waitForSelector('#cfg-body td:has-text("FromSub")'); step('subscription URL imported as configs');
-  await page.click('#sub-body [data-act=del]'); await page.waitForSelector('#toast:has-text("حذف شد")'); subSrv.close();
-  await page.waitForFunction(() => !document.querySelector('#cfg-body')?.textContent.includes('FromSub')); step('subscription removed with its configs');
+  await page.waitForSelector('#sub-body .group-row:has-text("Sub-1"):has-text("FromSub")'); step('subscription URL imported as configs (grouped)');
+  // subscription detail: view -> configs listed, full URL copyable, refresh now; then edit
+  await page.click('#sub-body [data-act=view]'); await page.waitForSelector('#modal-body .ud-section:has-text("FromSub")');
+  const mb = await page.evaluate(() => { const r = document.querySelector('#modal .modal-box').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: innerWidth, h: innerHeight }; });
+  assert.ok(mb.top > 0 && mb.bottom < mb.h && Math.abs((mb.left + mb.right) / 2 - mb.w / 2) < 2, `modal not centered ${JSON.stringify(mb)}`); step('modal centered in viewport');
+  await page.click('#modal-body .copy-field [data-copy]'); await page.waitForSelector('#toast:has-text("کپی شد")'); step('subscription URL copy');
+  await page.click('#sub-refresh'); await page.waitForSelector('#toast:has-text("کانفیگ")'); await page.waitForSelector('#modal-body .cfg-row:has-text("FromSub")');
+  await page.keyboard.press('Escape'); await page.waitForSelector('#modal.hidden', { state: 'attached' }); step('subscription refreshed from detail view');
+  await page.click('#sub-body [data-act=edit]'); await page.fill('#modal-body [name=name]', 'Sub-1b'); await page.click('#modal-body [type=submit]');
+  await page.waitForSelector('#sub-body .group-row:has-text("Sub-1b")'); step('subscription edited');
+  await page.click('#sub-body summary'); await page.click('#sub-body [data-act=refresh]'); await page.waitForSelector('#toast:has-text("کانفیگ")'); step('subscription refresh from list (⋯ menu)');
+  await page.click('#sub-body summary'); await page.click('#sub-body [data-act=del]'); await page.waitForSelector('#toast:has-text("حذف شد")'); subSrv.close();
+  await page.waitForFunction(() => !document.querySelector('#sub-body')?.textContent.includes('FromSub')); step('subscription removed with its configs');
 
   // bulk
   await page.click('#bulk-cfg');
@@ -115,6 +125,19 @@ const SHOTS = process.env.SHOTS || '/tmp';
   await page.waitForSelector('#users-body .badge:has-text("فعال")');
   await page.screenshot({ path: `${SHOTS}/panel-users.png`, fullPage: true });
 
+  // edit config through the modal; cancel + Escape close it
+  await page.click('[data-page=configs]'); await page.click('#cfg-body tr:first-child [data-act=edit]');
+  await page.waitForSelector('#modal:not(.hidden) #modal-body [name=link]');
+  await page.click('#modal-body [data-cancel]'); await page.waitForSelector('#modal.hidden', { state: 'attached' });
+  await page.click('#cfg-body tr:first-child [data-act=edit]'); await page.keyboard.press('Escape'); await page.waitForSelector('#modal.hidden', { state: 'attached' }); step('modal closes via Cancel and Escape');
+  await page.click('#cfg-body tr:first-child [data-act=edit]'); await page.fill('#modal-body [name=country]', 'هلند ۲');
+  await page.click('#modal-body [type=submit]'); await page.waitForSelector('#cfg-body td:has-text("هلند ۲")'); step('config edited');
+  // user detail view
+  await page.click('[data-page=users]'); await page.click('#users-body [data-act=detail]');
+  await page.waitForSelector('#modal-body .ud-stats'); await page.waitForSelector('#modal-body .ud-section:has-text("کانفیگ‌ها")');
+  await page.screenshot({ path: `${SHOTS}/panel-user-detail.png` });
+  await page.click('#modal-body .ud-section [data-copy]'); await page.waitForSelector('#toast:has-text("کپی شد")'); step('user detail: stats, sections, copy config');
+  await page.click('#modal-close');
   // edit config: disable
   await page.click('[data-page=configs]'); await page.click('#cfg-body tr:first-child [data-act=toggle]');
   await page.waitForSelector('#cfg-body tr:first-child .badge:has-text("غیرفعال")'); step('config disabled without delete');
@@ -128,16 +151,18 @@ const SHOTS = process.env.SHOTS || '/tmp';
   await m.context().addCookies(await page.context().cookies());
   await m.goto(base + '/#users'); await m.waitForSelector('#users-body td');
   await m.screenshot({ path: `${SHOTS}/panel-mobile.png` });
-  await m.click('#sidebar a[data-page=configs]'); await m.waitForSelector('#cfg-body td[data-label]');
+  await m.click('#menu-toggle'); await m.click('#sidebar a[data-page=configs]'); await m.waitForSelector('#cfg-body td');
   await m.screenshot({ path: `${SHOTS}/panel-mobile-configs.png` });
-  await m.click('#sidebar a[data-page=dashboard]'); await m.waitForSelector('.stats');
+  await m.click('#menu-toggle'); await m.click('#sidebar a[data-page=dashboard]'); await m.waitForSelector('.stats');
   await m.screenshot({ path: `${SHOTS}/panel-mobile-dashboard.png` });
-  await m.click('#sidebar a[data-page=users]'); await m.waitForSelector('#users-body [data-act=renew]');
+  await m.click('#menu-toggle'); await m.click('#sidebar a[data-page=users]'); await m.waitForSelector('#users-body [data-act=renew]');
   await m.click('#users-body [data-act=renew]'); await m.waitForSelector('#modal:not(.hidden)');
   await m.screenshot({ path: `${SHOTS}/panel-mobile-sheet.png` });
   const overflow = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   assert.ok(overflow <= 1, `horizontal overflow ${overflow}px`);
-  step('mobile: bottom nav, card tables, bottom-sheet modal, no horizontal scroll');
+  const box = await m.evaluate(() => { const r = document.querySelector('#modal .modal-box').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight }; });
+  assert.ok(box.top >= 0 && box.bottom <= box.h, `modal outside viewport ${JSON.stringify(box)}`);
+  step('mobile: off-canvas sidebar, scrollable tables, centered modal inside viewport, no page-level horizontal scroll');
 
   await page.click('#logout-btn'); await page.waitForSelector('#login-view:not(.hidden)'); step('logout');
   assert.deepEqual(cspErrors.filter((e) => /Content Security Policy|Refused/.test(e)), [], 'no CSP violations');

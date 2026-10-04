@@ -85,9 +85,11 @@ test('app endpoints never contact 3X-UI, even when a 3X-UI server is configured 
   await call('POST', '/api/admin/servers', { body: { name: 'down', xui_url: `http://127.0.0.1:${xuiSrv.address().port}/p`, xui_username: 'a', xui_password: 'b' } });
   xuiHits = 0; const subBefore = subHits;
   const t0 = Date.now();
-  for (const [m, p, b] of [['POST', '/api/v1/auth/login', { username: 'ali', password: 'alipass1' }], ['GET', '/api/v1/account'], ['GET', '/api/v1/configs'], ['GET', '/api/v1/usage'], ['POST', '/api/v1/events', { type: 'connected' }], ['POST', '/api/v1/events', { type: 'disconnected' }]]) {
+  // single-device rule: release the current session before logging in again
+  for (const [m, p, b] of [['POST', '/api/v1/auth/logout'], ['POST', '/api/v1/auth/login', { username: 'ali', password: 'alipass1' }], ['GET', '/api/v1/account'], ['GET', '/api/v1/configs'], ['GET', '/api/v1/usage'], ['POST', '/api/v1/events', { type: 'connected' }], ['POST', '/api/v1/events', { type: 'disconnected' }]]) {
     const r = await call(m, p, { body: b, auth: p.includes('login') ? undefined : token });
     assert.ok(r.status < 400, `${p} -> ${r.status}`);
+    if (p.endsWith('/login')) token = r.body.token;
   }
   assert.equal(xuiHits, 0, 'no request reached 3X-UI');
   assert.equal(subHits, subBefore, 'no request reached the subscription URL');

@@ -77,6 +77,11 @@ const SEC_HEADERS = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 };
 function send(res, status, obj, headers = {}) {
+  if (typeof obj === 'string') {
+    res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...SEC_HEADERS, ...headers });
+    res.end(obj);
+    return;
+  }
   const body = JSON.stringify(obj);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...SEC_HEADERS, ...headers });
   res.end(body);

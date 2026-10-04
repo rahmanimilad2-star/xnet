@@ -21,6 +21,7 @@ data class UiState(
     val loggedIn: Boolean = Repository.isLoggedIn,
     val loading: Boolean = false,
     val loginError: String? = null,
+    val loginErrorCode: String? = null, // xnet-single-device-v1
     val account: Account? = null,
     val configs: List<VpnConfig> = Repository.session.loadConfigs()?.configs.orEmpty(),
     val selectedConfigId: Long = Repository.session.selectedConfigId,
@@ -35,13 +36,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val vpn = VpnState.status
     private var syncJob: Job? = null
 
-    init { if (Repository.isLoggedIn) startSync() }
+    init { if (Repository.isLoggedIn) startSync() else viewModelScope.launch { flushPendingRelease() } }
 
     fun login(username: String, password: String) {
         if (username.isBlank() || password.isBlank()) { _ui.value = _ui.value.copy(loginError = "نام کاربری و رمز عبور را وارد کنید"); return }
-        _ui.value = _ui.value.copy(loading = true, loginError = null)
+        _ui.value = _ui.value.copy(loading = true, loginError = null, loginErrorCode = null)
         viewModelScope.launch {
             try {
+                flushPendingRelease() // free this phone's previous session first, if a sign-out was offline
                 val (token, acc) = Repository.api.login(username.trim(), password)
                 Repository.session.token = token
                 Repository.session.username = acc.username
@@ -49,7 +51,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _ui.value = UiState(loggedIn = true, account = acc)
                 startSync()
             } catch (e: ApiException) {
-                _ui.value = _ui.value.copy(loading = false, loginError = e.message)
+                _ui.value = _ui.value.copy(loading = false, loginError = e.message, loginErrorCode = e.code)
             }
         }
     }
@@ -79,7 +81,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return bundle.syncAfterSeconds.coerceIn(30, 3600)
         } catch (e: ApiException) {
             when (e.code) {
-                "UNAUTHORIZED" -> { logout(); }
+                "UNAUTHORIZED" -> { logout(releaseOnServer = false) } // server already ended this session
                 "NETWORK" -> _ui.value = _ui.value.copy(info = e.message)
                 else -> {
                     // QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG
@@ -93,7 +95,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun selectConfig(id: Long) {
-        if (Repository.session.selectedConfigId == id) return
         Repository.session.selectedConfigId = id
         _ui.value = _ui.value.copy(selectedConfigId = id)
         if (vpn.value.phase != Phase.DISCONNECTED) AppVpnService.reload(getApplication())
@@ -113,10 +114,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun logout() {
+    fun logout(releaseOnServer: Boolean = true) {
+        val token = if (releaseOnServer) Repository.session.token else null
         AppVpnService.stop(getApplication())
         syncJob?.cancel()
         Repository.logout()
         _ui.value = UiState(loggedIn = false, configs = emptyList())
+        if (token != null) {
+            Repository.session.pendingRelease = token
+            viewModelScope.launch { flushPendingRelease() }
+        }
+    }
+
+    /** Tell the server this phone signed out, so the account can be used on another device. */
+    private suspend fun flushPendingRelease() {
+        val t = Repository.session.pendingRelease ?: return
+        if (Repository.api.logout(t)) Repository.session.pendingRelease = null
     }
 }

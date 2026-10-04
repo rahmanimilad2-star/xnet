@@ -53,5 +53,10 @@ class SessionStore(context: Context) {
         }.getOrNull()
     }
 
+    /** Token of a sign-out that couldn't reach the server yet (offline); retried later. */
+    var pendingRelease: String?
+        get() = prefs.getString("pending_release", null)
+        set(v) = prefs.edit().putString("pending_release", v).apply()
+
     fun clear() = prefs.edit().clear().apply()
 }

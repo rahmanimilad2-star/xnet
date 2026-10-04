@@ -83,6 +83,23 @@ test('generated links are valid and point to the public host', async () => {
   assert.equal(vm.streamSettings.grpcSettings.serviceName, 'svc');
 });
 
+test('unified provisioning creates one usable per-user subscription without duplicates', async () => {
+  const rows = getDb().prepare("SELECT * FROM subscriptions WHERE scope='users' AND user_ids LIKE '%1%'").all();
+  assert.equal(rows.length, 1);
+  assert.match(rows[0].url, /\/api\/v1\/subscriptions\/[a-f0-9]{48}$/);
+  assert.equal(rows[0].last_count, 4);
+  const feed = await fetch(base + rows[0].url);
+  assert.equal(feed.status, 200);
+  const decoded = Buffer.from(await feed.text(), 'base64').toString('utf8').trim().split(/\n/);
+  assert.equal(decoded.length, 4);
+  const again = await fetch(base + '/api/v1/subscriptions/not-a-real-token');
+  assert.equal(again.status, 404);
+  const reprovision = await call('POST', `/api/admin/users/${userId}/provision`);
+  assert.equal(reprovision.status, 200);
+  assert.equal(getDb().prepare("SELECT COUNT(*) n FROM subscriptions WHERE scope='users' AND user_ids LIKE '%1%'").get().n, 1);
+  assert.equal(getDb().prepare('SELECT COUNT(*) n FROM user_clients WHERE user_id=?').get(userId).n, 4);
+});
+
 test('app login sees own configs; usage and live speed come from 3X-UI', async () => {
   let r = await call('POST', '/api/v1/auth/login', { body: { username: 'ali', password: 'alipass1' } });
   token = r.body.token;

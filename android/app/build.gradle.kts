@@ -5,7 +5,7 @@ plugins {
 }
 
 // Backend URL: -PvpnApiBaseUrl=... or env VPN_API_BASE_URL (CI), otherwise gradle.properties
-val apiBase: String = "https://core.xnetify.ir"
+val apiBase: String = System.getenv("VPN_API_BASE_URL")?.takeIf { it.isNotBlank() }
     ?: (project.findProperty("vpnApiBaseUrl") as String?) ?: "https://core.xnetify.ir"
 
 android {
@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 2
-        versionName = "1.0.1"
+        versionName = "1.1.0"
         buildConfigField("String", "API_BASE_URL", "\"${apiBase.trimEnd('/')}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }

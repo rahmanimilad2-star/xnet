@@ -7,6 +7,7 @@ const { decryptSecret } = require('./security');
 const { buildShareLink } = require('./xuilink');
 const { parseLink } = require('./links');
 const { audit, subscriptionStatus, getUsage } = require('./services');
+const { config } = require('./config');
 
 const SUPPORTED = new Set(['vless', 'vmess', 'trojan', 'shadowsocks']);
 
@@ -20,8 +21,30 @@ function publicHost(server) {
 function provisionTargets(server) {
   try { const a = JSON.parse(server.provision_inbounds || '[]'); return Array.isArray(a) ? a.filter(Number.isInteger) : []; } catch { return []; }
 }
-function provisionServers() {
-  return getDb().prepare("SELECT * FROM servers WHERE enabled=1 AND xui_url<>''").all().filter((s) => provisionTargets(s).length);
+
+function userSubscription(user) {
+  const rows = getDb().prepare("SELECT * FROM subscriptions WHERE scope='users' ORDER BY id").all();
+  return rows.find((row) => {
+    try { return JSON.parse(row.user_ids || '[]').map(Number).includes(Number(user.id)) && String(row.url).includes('/api/v1/subscriptions/'); } catch { return false; }
+  }) || null;
+}
+
+function createUserSubscription(user) {
+  const existing = userSubscription(user);
+  if (existing) return existing;
+  const token = crypto.randomBytes(24).toString('hex');
+  const base = config.publicUrl ? config.publicUrl.replace(/\/+$/, '') : '';
+  const url = `${base}/api/v1/subscriptions/${token}`;
+  const now = Date.now();
+  const result = getDb().prepare(`INSERT INTO subscriptions(name,url,country,priority,scope,user_ids,group_ids,enabled,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,'[]',1,?,?)`).run(`XNET · ${user.username}`, url, '', 10, 'users', JSON.stringify([user.id]), now, now);
+  return getDb().prepare('SELECT * FROM subscriptions WHERE id=?').get(Number(result.lastInsertRowid));
+}
+function provisionServers(options = {}) {
+  const rows = getDb().prepare("SELECT * FROM servers WHERE enabled=1 AND xui_url<>''").all();
+  return rows
+    .filter((s) => options.server_id == null || s.id === options.server_id)
+    .filter((s) => provisionTargets(s).length);
 }
 
 /** Values 3X-UI should enforce for this user's clients. */
@@ -52,18 +75,28 @@ function newClient(protocol, inbound, email, limits) {
  * Create a client for [user] on every selected inbound that does not have one yet,
  * create the matching config (assigned only to this user). Returns {created, errors}.
  */
-async function provisionUser(user) {
+async function provisionUser(user, options = {}) {
   const db = getDb();
   const out = { created: [], errors: [] };
   const limits = limitsFor(user);
-  for (const server of provisionServers()) {
+  for (const server of provisionServers(options)) {
     let x;
     try { x = clientFor(server); await x.login(); } catch (e) { out.errors.push({ server: server.name, error: e.message }); continue; }
     let inbounds = [];
     try { inbounds = await x.listInbounds(); } catch (e) { out.errors.push({ server: server.name, error: e.message }); continue; }
-    for (const inboundId of provisionTargets(server)) {
+    const targets = options.inbound_id == null
+      ? provisionTargets(server)
+      : provisionTargets(server).filter((id) => id === options.inbound_id);
+    for (const inboundId of targets) {
       const exists = db.prepare('SELECT 1 FROM user_clients WHERE user_id=? AND server_id=? AND inbound_id=?').get(user.id, server.id, inboundId);
-      if (exists) continue;
+      if (exists) {
+        const existingClient = db.prepare('SELECT config_id FROM user_clients WHERE user_id=? AND server_id=? AND inbound_id=?').get(user.id, server.id, inboundId);
+        if (existingClient?.config_id) {
+          const subscription = createUserSubscription(user);
+          db.prepare('UPDATE configs SET subscription_id=? WHERE id=? AND subscription_id IS NULL').run(subscription.id, existingClient.config_id);
+        }
+        continue;
+      }
       const inbound = inbounds.find((i) => i.id === inboundId);
       if (!inbound) { out.errors.push({ server: server.name, inbound: inboundId, error: 'inbound پیدا نشد' }); continue; }
       if (!SUPPORTED.has(inbound.protocol)) { out.errors.push({ server: server.name, inbound: inboundId, error: `پروتکل ${inbound.protocol} پشتیبانی نمی‌شود` }); continue; }
@@ -75,13 +108,16 @@ async function provisionUser(user) {
         const link = buildShareLink(inbound, client, publicHost(server), name);
         const parsed = parseLink(link); // validates the generated link
         const now = Date.now();
-        const cfg = db.prepare(`INSERT INTO configs(name,country,link,protocol,enabled,priority,scope,server_id,source,created_at,updated_at)
-          VALUES (?,?,?,?,1,?,'users',?,'xui',?,?)`).run(name, server.country || '', link, parsed.protocol, 50 + out.created.length, server.id, now, now);
+        const subscription = createUserSubscription(user);
+        const cfg = db.prepare(`INSERT INTO configs(name,country,link,protocol,enabled,priority,scope,server_id,subscription_id,source,created_at,updated_at)
+          VALUES (?,?,?,?,1,?,'users',?,?, 'xui',?,?)`).run(name, server.country || '', link, parsed.protocol, 50 + out.created.length, server.id, subscription.id, now, now);
         const configId = Number(cfg.lastInsertRowid);
         db.prepare('INSERT INTO config_users(config_id,user_id) VALUES (?,?)').run(configId, user.id);
         db.prepare(`INSERT INTO user_clients(user_id,server_id,inbound_id,protocol,email,client_key,config_id,enabled_on_xui,created_at)
           VALUES (?,?,?,?,?,?,?,?,?)`).run(user.id, server.id, inboundId, inbound.protocol, email, client.id || client.password, configId, limits.enable ? 1 : 0, now);
         out.created.push({ server: server.name, inbound: inboundId, email, config_id: configId });
+        db.prepare('UPDATE subscriptions SET last_count=(SELECT COUNT(*) FROM configs WHERE subscription_id=?), last_fetch_at=?, last_error=NULL, updated_at=? WHERE id=?')
+          .run(subscription.id, now, now, subscription.id);
       } catch (e) {
         out.errors.push({ server: server.name, inbound: inboundId, error: e.message });
       }
@@ -132,4 +168,4 @@ async function deprovisionUser(userId) {
   return forEachServerClient(userId, async (x, c) => { await x.deleteClient(c.inbound_id, c.protocol, c.client_key, c.email); });
 }
 
-module.exports = { provisionUser, pushLimits, resetTraffic, deprovisionUser, clientsOf, provisionTargets, publicHost, clientFor, limitsFor };
+module.exports = { provisionUser, pushLimits, resetTraffic, deprovisionUser, clientsOf, provisionTargets, publicHost, clientFor, limitsFor, userSubscription };

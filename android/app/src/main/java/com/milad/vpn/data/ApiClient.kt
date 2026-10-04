@@ -3,7 +3,6 @@ package com.milad.vpn.data
 import com.milad.vpn.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import android.util.Log
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -23,10 +22,10 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
 
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
-    private suspend fun call(method: String, path: String, body: JSONObject? = null, auth: Boolean = true): JSONObject =
+    private suspend fun call(method: String, path: String, body: JSONObject? = null, auth: Boolean = true, bearer: String? = null): JSONObject =
         withContext(Dispatchers.IO) {
             val rb = Request.Builder().url(baseUrl + path).header("Accept", "application/json")
-            if (auth) tokenProvider()?.let { rb.header("Authorization", "Bearer $it") }
+            if (auth) (bearer ?: tokenProvider())?.let { rb.header("Authorization", "Bearer $it") }
             when (method) {
                 "GET" -> rb.get()
                 else -> rb.method(method, (body ?: JSONObject()).toString().toRequestBody(jsonType))
@@ -34,8 +33,7 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
             val resp = try {
                 http.newCall(rb.build()).execute()
             } catch (e: IOException) {
-                Log.e("ApiClient", "Network request failed: ${rb.build().url}", e)
-                throw ApiException(0, "NETWORK", "اتصال به سرور برقرار نشد: ${e.javaClass.simpleName}")
+                throw ApiException(0, "NETWORK", "اتصال به سرور برقرار نشد. اینترنت خود را بررسی کنید.")
             }
             resp.use {
                 val text = it.body?.string().orEmpty()
@@ -58,6 +56,11 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
         val j = call("POST", "/api/v1/auth/login", JSONObject().put("username", username).put("password", password), auth = false)
         return j.getString("token") to Account.from(j.getJSONObject("account"))
     }
+
+    /** Frees this device's server session. true = server reached (it always answers 200), false = offline. */
+    suspend fun logout(token: String): Boolean = try {
+        call("POST", "/api/v1/auth/logout", JSONObject(), bearer = token); true
+    } catch (e: ApiException) { e.code != "NETWORK" }
 
     suspend fun account(): Account = Account.from(call("GET", "/api/v1/account").getJSONObject("account"))
 

@@ -8,6 +8,8 @@ const { GB, getUsage, subscriptionStatus, accountView, allowedConfigs, audit, ST
 const stats = require('./stats');
 const prov = require('./provision');
 const subs = require('./subscriptions');
+const crypto = require('node:crypto');
+const sessions = require('./sessions');
 
 const limiter = new sec.LoginLimiter(config.loginMaxAttempts, config.loginWindowMin * 60000);
 setInterval(() => limiter.sweep(), 60000).unref();
@@ -25,6 +27,8 @@ function requireUser(ctx) {
   if (!p || p.role !== 'user') throw new HttpError(401, 'UNAUTHORIZED', 'لطفاً دوباره وارد شوید');
   const user = getDb().prepare('SELECT * FROM users WHERE id=?').get(p.sub);
   if (!user || user.token_version !== p.tv) throw new HttpError(401, 'UNAUTHORIZED', 'نشست شما منقضی شده است. دوباره وارد شوید');
+  // single device: the token must be the user's active server-side session
+  if (!sessions.check(user, p, bearer(ctx.req))) throw new HttpError(401, 'UNAUTHORIZED', 'این حساب روی دستگاه دیگری فعال است. دوباره وارد شوید');
   getDb().prepare('UPDATE users SET last_seen_at=? WHERE id=?').run(Date.now(), user.id);
   ctx.user = user;
 }
@@ -89,13 +93,17 @@ function adminUserView(u) {
   const configIds = getDb().prepare('SELECT config_id FROM config_users WHERE user_id=?').all(u.id).map((r) => r.config_id);
   return {
     ...acc, user_status: u.status, xui_email: u.xui_email, group_id: u.group_id, note: u.note,
+    device_session_active: sessions.status(u.id, u.token_version).active,
+    device_session_expires_at: sessions.status(u.id, u.token_version).expires_at,
     config_ids: configIds, allowed_config_count: allowedConfigs(u).length,
     online: (acc.rate_up_bps + acc.rate_down_bps) > 0,
     xui_clients: prov.clientsOf(u.id).map((c) => ({ server: c.server_name, inbound_id: c.inbound_id, protocol: c.protocol, email: c.email, enabled: !!c.enabled_on_xui, used_bytes: Math.max(0, c.up_bytes - c.base_up) + Math.max(0, c.down_bytes - c.base_down), last_error: c.last_error })),
     provision_error: u.provision_error ? JSON.parse(u.provision_error) : null,
+    subscriptions: getDb().prepare("SELECT id,name,url,enabled,last_error,last_count FROM subscriptions WHERE scope='users' AND user_ids LIKE ?").all(`%${u.id}%`),
     last_login_at: u.last_login_at, last_seen_at: u.last_seen_at, created_at: u.created_at, updated_at: u.updated_at,
   };
 }
+
 function adminConfigView(c) {
   const db = getDb();
   let host = '';
@@ -133,6 +141,17 @@ function parseConfigBody(b, partial) {
 // ================================================================= router
 const r = new Router();
 
+// Generated per-user subscription feed. The token is stored in the existing subscriptions.url.
+r.get('/api/v1/subscriptions/:token', (ctx) => {
+  const token = String(ctx.params.token || '');
+  if (!/^[a-f0-9]{48}$/i.test(token)) throw new HttpError(404, 'NOT_FOUND', 'Subscription پیدا نشد');
+  const sub = getDb().prepare('SELECT * FROM subscriptions WHERE url LIKE ? AND enabled=1').get(`%/api/v1/subscriptions/${token}`);
+  if (!sub) throw new HttpError(404, 'NOT_FOUND', 'Subscription پیدا نشد');
+  const links = getDb().prepare('SELECT link FROM configs WHERE subscription_id=? AND enabled=1 ORDER BY priority,id').all(sub.id).map((x) => x.link);
+  ctx.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  return Buffer.from(links.join('\n'), 'utf8').toString('base64');
+});
+
 r.get('/healthz', () => ({ ok: true, time: Date.now() }));
 
 // ---------------------------------------------------------------- app API
@@ -148,9 +167,28 @@ r.post('/api/v1/auth/login', (ctx) => {
   }
   limiter.reset(keys);
   if (user.status === 'blocked') throw new HttpError(403, 'BLOCKED', STATUS_MESSAGES.BLOCKED);
+  // single device: atomically bind this login as the only active session (BEGIN IMMEDIATE + PK on user_id)
+  const issued = sessions.claim(user.id,
+    (sid, tv) => sec.signToken({ sub: user.id, role: 'user', tv, sid }, config.userTokenTtlH),
+    { ip: ctx.ip, userAgent: ctx.req.headers['user-agent'] });
+  if (!issued) {
+    audit(`user:${user.username}`, 'user.login_rejected_active_device', null, null, ctx.ip);
+    throw new HttpError(409, 'ALREADY_ACTIVE', 'این حساب در حال حاضر روی دستگاه دیگری فعال است. ابتدا از آن دستگاه خارج شوید');
+  }
   getDb().prepare('UPDATE users SET last_login_at=?, last_seen_at=? WHERE id=?').run(Date.now(), Date.now(), user.id);
-  const { token, exp } = sec.signToken({ sub: user.id, role: 'user', tv: user.token_version }, config.userTokenTtlH);
-  return { token, expires_at: exp, account: accountView(user) };
+  return { token: issued.token, expires_at: issued.exp, account: accountView(user) };
+});
+
+// Release the device. Idempotent: an invalid/expired token simply gets { released: false }.
+r.post('/api/v1/auth/logout', (ctx) => {
+  const raw = bearer(ctx.req);
+  const p = sec.verifyToken(raw);
+  if (!p || p.role !== 'user') return { ok: true, released: false };
+  const user = getDb().prepare('SELECT * FROM users WHERE id=?').get(p.sub);
+  if (!user || user.token_version !== p.tv) return { ok: true, released: false };
+  const released = sessions.release(user, p, raw);
+  if (released) audit(`user:${user.username}`, 'user.logout', null, null, ctx.ip);
+  return { ok: true, released };
 });
 
 r.get('/api/v1/account', requireUser, (ctx) => ({ account: accountView(ctx.user) }));
@@ -254,9 +292,20 @@ function parseUserBody(b, partial) {
     xui_email: b.xui_email === null || b.xui_email === '' ? null : v.str(b.xui_email, 'ایمیل 3X-UI', { max: 128, re: /^[^\s/]+$/, optional: true }),
     note: v.str(b.note, 'یادداشت', { max: 500, optional: true }),
     config_ids: v.ids(b.config_ids, 'کانفیگ‌ها', { optional: true }),
+    provision_server_id: b.provision_server_id == null || b.provision_server_id === '' ? null : v.int(b.provision_server_id, 'سرور Provisioning', { min: 1, optional: true }),
+    provision_inbound_id: b.provision_inbound_id == null || b.provision_inbound_id === '' ? null : v.int(b.provision_inbound_id, 'Inbound Provisioning', { min: 1, optional: true }),
+    auto_provision: v.bool(b.auto_provision, 'ساخت خودکار', { optional: true }),
   };
   if (out.group_id) checkIdsExist('groups', [out.group_id], 'گروه‌ها');
   checkIdsExist('configs', out.config_ids, 'کانفیگ‌ها');
+  if (!partial && out.provision_server_id != null) {
+    const server = getDb().prepare('SELECT * FROM servers WHERE id=? AND enabled=1').get(out.provision_server_id);
+    if (!server) throw new HttpError(400, 'VALIDATION', 'سرور Provisioning معتبر یا فعال نیست');
+    const targets = prov.provisionTargets(server);
+    if (out.provision_inbound_id != null && !targets.includes(out.provision_inbound_id)) {
+      throw new HttpError(400, 'VALIDATION', 'Inbound انتخاب‌شده برای این سرور مجاز نیست');
+    }
+  }
   return out;
 }
 function userAssignConfigs(userId, configIds) {
@@ -280,7 +329,12 @@ r.post('/api/admin/users', requireAdmin, async (ctx) => {
   });
   audit(`admin:${ctx.admin.username}`, 'user.create', `user:${id}`, { username: b.username }, ctx.ip);
   // Automatically create this user's clients on the selected 3X-UI inbounds (with quota + expiry).
-  const provision = await prov.provisionUser(getUserOr404(id));
+  const provision = b.auto_provision === false
+    ? { created: [], errors: [], skipped: true }
+    : await prov.provisionUser(getUserOr404(id), {
+      server_id: b.provision_server_id,
+      inbound_id: b.provision_inbound_id,
+    });
   ctx.status = 201;
   return { user: adminUserView(getUserOr404(id)), provision };
 });
@@ -328,6 +382,14 @@ r.post('/api/admin/users/:id/renew', requireAdmin, async (ctx) => {
   if (reset) xui_errors.push(...await prov.resetTraffic(getUserOr404(u.id)));
   xui_errors.push(...await prov.pushLimits(getUserOr404(u.id)));
   return { user: adminUserView(getUserOr404(u.id)), xui_errors };
+});
+
+// Free a user's device slot (lost / reset phone). Their current token stops working.
+r.post('/api/admin/users/:id/release-device', requireAdmin, (ctx) => {
+  const u = getUserOr404(+ctx.params.id);
+  const released = sessions.adminRelease(u.id);
+  audit(`admin:${ctx.admin.username}`, 'user.release_device', `user:${u.id}`, { released }, ctx.ip);
+  return { ok: true, released };
 });
 
 r.delete('/api/admin/users/:id', requireAdmin, async (ctx) => {

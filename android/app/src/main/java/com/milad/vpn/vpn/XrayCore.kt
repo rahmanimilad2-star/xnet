@@ -1,4 +1,3 @@
-// Build fix: libv2ray CoreController has no queryStats API
 package com.milad.vpn.vpn
 
 import android.content.Context
@@ -50,5 +49,6 @@ object XrayCore {
         runCatching { controller?.measureDelay(url) ?: -1L }.getOrDefault(-1L)
 
     /** Bytes since the previous call (Xray resets the counter on read). */
-    fun queryStats(tag: String, direction: String): Long = 0L
+    fun queryStats(tag: String, direction: String): Long =
+        runCatching { controller?.queryStats(tag, direction) ?: 0L }.getOrDefault(0L)
 }

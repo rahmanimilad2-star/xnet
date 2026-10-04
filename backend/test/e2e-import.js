@@ -11,6 +11,7 @@ const { openDb, getDb } = require('../src/db');
 openDb(':memory:');
 const { hashPassword } = require('../src/security');
 const { createServer } = require('../src/app');
+const nav = async (p, name) => { if (await p.isVisible('#menu-toggle')) await p.click('#menu-toggle'); await p.click(`#sidebar a[data-page=${name}]`); };
 const SHOTS = process.env.SHOTS || '/tmp';
 const VLESS = 'vless://a3482e88-686a-4a58-8126-99c9df64b7bf@1.2.3.4:443?type=tcp&security=reality&pbk=abc123&sni=www.speedtest.net&fp=chrome&flow=xtls-rprx-vision#Pasted%20NL';
 const TROJAN = 'trojan://pw@tr.example.org:443?security=tls&type=ws&path=%2Ft&sni=tr.example.org#Pasted%20TR';
@@ -27,12 +28,12 @@ const TROJAN = 'trojan://pw@tr.example.org:443?security=tls&type=ws&path=%2Ft&sn
   await page.goto(base);
   await page.fill('#login-form [name=username]', 'admin'); await page.fill('#login-form [name=password]', 'AdminPass123!');
   await page.click('#login-form button'); await page.waitForSelector('.stats');
-  await page.click('#sidebar a[data-page=users]'); await page.click('#add-user');
+  await nav(page, 'users'); await page.click('#add-user');
   await page.fill('#modal-body [name=username]', 'nima'); await page.fill('#modal-body [name=password]', 'nimapass1');
   await page.fill('#modal-body [name=quota_gb]', '0'); await page.click('#modal-body [type=submit]');
   await page.waitForSelector('#users-body td:has-text("nima")');
 
-  await page.click('#sidebar a[data-page=configs]'); await page.click('#import-cfg');
+  await nav(page, 'configs'); await page.click('#import-cfg');
   await page.fill('#modal-body [name=text]', [VLESS, 'vmess://notbase64!!', TROJAN].join('\n'));
   await page.click('#import-check');
   await page.waitForSelector('#import-sum:has-text("۲ معتبر")');
@@ -42,7 +43,7 @@ const TROJAN = 'trojan://pw@tr.example.org:443?security=tls&type=ws&path=%2Ft&sn
   await page.screenshot({ path: `${SHOTS}/import-preview.png`, fullPage: true });
   await page.click('#modal-body [type=submit]');
   await page.waitForSelector('#toast:has-text("۲ کانفیگ")'); step('valid ones saved, invalid one reported');
-  await page.click('#modal-close'); await page.click('#sidebar a[data-page=dashboard]'); await page.click('#sidebar a[data-page=configs]');
+  await page.click('#modal-close'); await nav(page, 'dashboard'); await nav(page, 'configs');
   await page.waitForSelector('#cfg-body td:has-text("Pasted NL")');
   assert.ok((await page.textContent('#cfg-body')).includes('دستی')); step('configs listed with source «دستی»');
   await page.screenshot({ path: `${SHOTS}/import-list.png` });
