@@ -1,3 +1,4 @@
+// Build fix: libv2ray CoreController has no queryStats API
 package com.milad.vpn.vpn
 
 import android.content.Context
