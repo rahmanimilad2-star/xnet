@@ -66,10 +66,11 @@ class AppVpnService : VpnService() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var lostNetwork = false
     private var lifecycleGeneration = 0L
+    private var reconnectJob: Job? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> { lifecycleGeneration++; shutdown(null, null); return START_NOT_STICKY }
+            ACTION_STOP -> { shutdown(null, null); return START_NOT_STICKY }
             ACTION_RELOAD -> { if (VpnState.status.value.phase != Phase.DISCONNECTED) connect(Repository.configsToTry()); return START_STICKY }
             else -> {
                 lifecycleGeneration++
@@ -90,14 +91,15 @@ class AppVpnService : VpnService() {
     private fun connect(candidates: List<VpnConfig>, reconnect: Boolean = false) {
         val generation = lifecycleGeneration
         connectJob?.cancel()
+        reconnectJob?.cancel()
         connectJob = scope.launch {
             VpnState.update { it.copy(phase = if (reconnect) Phase.RECONNECTING else Phase.CONNECTING, error = null, stopCode = null) }
             // Connecting never waits on a remote panel: if configs are cached we start the core right away
             // and refresh from our backend in the background. Only with an empty cache (first run) do we fetch first.
             if (Repository.session.loadConfigs()?.configs.isNullOrEmpty()) {
-                if (!refreshFromServer()) return@launch
+                if (!refreshFromServer(generation)) return@launch
             } else {
-                scope.launch { refreshFromServer() }
+                    scope.launch { refreshFromServer(generation) }
             }
             val list = Repository.configsToTry().ifEmpty { candidates }
             if (list.isEmpty()) { shutdown("سرور فعالی برای حساب شما وجود ندارد.", "NO_CONFIG"); return@launch }
@@ -133,7 +135,7 @@ class AppVpnService : VpnService() {
                 scope.launch { Repository.api.event("failed", cfg.id, err) } // fire-and-forget
                 stopCore()
             }
-            shutdown(lastError ?: "اتصال به هیچ سروری برقرار نشد.", null)
+            if (generation == lifecycleGeneration) shutdown(lastError ?: "اتصال به هیچ سروری برقرار نشد.", null)
         }
     }
 
@@ -143,7 +145,7 @@ class AppVpnService : VpnService() {
      * (blocked / expired / quota exceeded / no config / logged out). Any other failure
      * (network, timeout, 5xx, proxy error) keeps the encrypted cached configs and the tunnel running.
      */
-    private suspend fun refreshFromServer(): Boolean {
+    private suspend fun refreshFromServer(generation: Long = lifecycleGeneration): Boolean {
         return try {
             val (_, bundle) = Repository.api.configs()
             val oldVersion = Repository.session.loadConfigs()?.version
@@ -152,15 +154,27 @@ class AppVpnService : VpnService() {
             true
         } catch (e: ApiException) {
             when (e.code) {
-                "UNAUTHORIZED" -> { Repository.logout(); shutdown(e.message, e.code); false }
+                "UNAUTHORIZED" -> {
+                    if (generation == lifecycleGeneration) {
+                        Repository.logout()
+                        shutdown(e.message, e.code)
+                    }
+                    false
+                }
                 in DENIAL_CODES -> {
-                    Repository.session.saveConfigs(com.milad.vpn.data.ConfigBundle(emptyList(), "", 300))
-                    shutdown(e.message, e.code); false
+                    if (generation == lifecycleGeneration) {
+                        Repository.session.saveConfigs(com.milad.vpn.data.ConfigBundle(emptyList(), "", 300))
+                        shutdown(e.message, e.code)
+                    }
+                    false
                 }
                 else -> {
                     Log.w(TAG, "backend refresh failed (${e.code}); using cached configs")
                     Repository.session.loadConfigs()?.configs?.isNotEmpty() == true ||
-                        run { shutdown(e.message, null); false }
+                        run {
+                            if (generation == lifecycleGeneration) shutdown(e.message, null)
+                            false
+                        }
                 }
             }
         }
@@ -216,7 +230,7 @@ class AppVpnService : VpnService() {
                 if (now - lastConfigSync > syncEvery) {
                     lastConfigSync = now
                     val before = Repository.session.loadConfigs()?.configs?.firstOrNull { it.id == current?.id }
-                    if (!refreshFromServer()) return@launch
+                    if (!refreshFromServer(lifecycleGeneration)) return@launch
                     val after = Repository.session.loadConfigs()?.configs?.firstOrNull { it.id == current?.id }
                     // current config was removed/disabled/changed from the panel -> reconnect with the new set
                     if (after == null || after.outbound != before?.outbound) { connect(Repository.configsToTry(), reconnect = true); return@launch }
@@ -238,7 +252,16 @@ class AppVpnService : VpnService() {
                 setUnderlyingNetworks(arrayOf(network))
                 if (lostNetwork && VpnState.status.value.phase != Phase.DISCONNECTED) {
                     lostNetwork = false
-                    scope.launch { delay(1500); connect(Repository.configsToTry(), reconnect = true) }
+                    val generation = lifecycleGeneration
+                    reconnectJob?.cancel()
+                    reconnectJob = scope.launch {
+                        delay(1500)
+                        if (isActive && generation == lifecycleGeneration &&
+                            VpnState.status.value.phase != Phase.DISCONNECTED
+                        ) {
+                            connect(Repository.configsToTry(), reconnect = true)
+                        }
+                    }
                 }
             }
             override fun onLost(network: Network) {
@@ -260,6 +283,8 @@ class AppVpnService : VpnService() {
     private fun shutdown(error: String?, code: String?) {
         lifecycleGeneration++
         connectJob?.cancel(); monitorJob?.cancel()
+        reconnectJob?.cancel()
+        reconnectJob = null
         val last = current
         stopCore()
         current = null

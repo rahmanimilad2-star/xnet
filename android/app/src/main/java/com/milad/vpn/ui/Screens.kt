@@ -82,6 +82,7 @@ private val DarkSurface = Color(0xFF151821)
 private val DarkSurface2 = Color(0xFF1D212D)
 
 private const val DEVELOPER_NAME = "M.R"
+private const val SUPPORT_TELEGRAM = "@rahmani208"
 private const val APP_TITLE = "Xnet"
 
 private val CardShape = RoundedCornerShape(22.dp)
@@ -486,7 +487,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                     val sel = tab == i
                     val tint by animateColorAsState(if (sel) MaterialTheme.colorScheme.primary else muted(), tween(180), label = "navTint")
                     val pill by animateColorAsState(
-                        if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent, tween(180), label = "navPill",
+                        if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else Color.Transparent, tween(180), label = "navPill",
                     )
                     Column(
                         Modifier
@@ -503,7 +504,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                             contentAlignment = Alignment.Center,
                         ) { Icon(if (sel) filled[i] else outlined[i], contentDescription = null, tint = tint, modifier = Modifier.size(22.dp)) }
                         Spacer(Modifier.height(3.dp))
-                        Text(label, color = tint, fontSize = 11.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+                        Text(label, color = tint, fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
                     }
                 }
             }
@@ -941,7 +942,15 @@ fun AccountScreen(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(icon = Icons.Filled.Code, title = if (english) "Developer" else "توسعه‌دهنده") {
-                    Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(DEVELOPER_NAME, fontWeight = FontWeight.Bold)
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                        Text(
+                            SUPPORT_TELEGRAM,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { uriHandler.openUri("https://t.me/rahmani208") },
+                        )
+                    }
                 }
             }
         }
