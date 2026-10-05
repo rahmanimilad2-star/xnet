@@ -14,6 +14,7 @@ jobs:
     defaults:
       run:
         working-directory: android
+
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +46,9 @@ jobs:
 
       - name: Generate Gradle wrapper (if missing)
         run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then gradle wrapper --gradle-version 8.14.3; fi
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            gradle wrapper --gradle-version 8.14.3
+          fi
           chmod +x gradlew
 
       - name: Decode release keystore
@@ -55,7 +58,7 @@ jobs:
           echo "$VPN_KEYSTORE_B64" | base64 --decode > xnet-release.keystore
           chmod 600 xnet-release.keystore
 
-      - name: assembleRelease
+      - name: Build release APK
         env:
           VPN_KEYSTORE: ../xnet-release.keystore
           VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
@@ -63,11 +66,19 @@ jobs:
           VPN_KEY_PASSWORD: ${{ secrets.VPN_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease -PvpnApiBaseUrl=https://core.xnetify.ir
 
+      - name: Verify release API base URL
+        run: |
+          f=$(find app/build/generated -name BuildConfig.java -path '*release*' | head -1)
+          grep 'API_BASE_URL' "$f"
+          grep -q 'API_BASE_URL = "https://core.xnetify.ir"' "$f" || {
+            echo "ERROR: Release API_BASE_URL is not https://core.xnetify.ir"
+            exit 1
+          }
+
       - name: Unit tests
-        continue-on-error: true
         run: ./gradlew --no-daemon testDebugUnitTest
 
-      - name: Upload APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release

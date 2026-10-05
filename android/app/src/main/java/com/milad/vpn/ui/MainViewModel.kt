@@ -10,6 +10,7 @@ import com.milad.vpn.data.VpnConfig
 import com.milad.vpn.vpn.AppVpnService
 import com.milad.vpn.vpn.Phase
 import com.milad.vpn.vpn.VpnState
+import com.milad.vpn.vpn.VpnStatus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,8 @@ data class UiState(
     val selectedConfigId: Long = Repository.session.selectedConfigId,
     /** message for the subscription/config problem (quota, expiry, no config…) */
     val blockMessage: String? = null,
+    /** backend code behind [blockMessage] (QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG) */
+    val blockCode: String? = null,
     val info: String? = null,
 )
 
@@ -82,7 +85,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             Repository.session.saveConfigs(bundle)
             Repository.publishAccount(acc)
             _ui.value = _ui.value.copy(
-                account = acc, configs = bundle.configs, blockMessage = null, info = null,
+                account = acc, configs = bundle.configs, blockMessage = null, blockCode = null, info = null,
                 // the service may have switched a removed manual location back to Auto
                 selectedConfigId = Repository.session.selectedConfigId,
             )
@@ -98,7 +101,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 in DENIAL_CODES -> {
                     // QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG
                     val acc = e.account ?: runCatching { Repository.api.account() }.getOrNull()
-                    _ui.value = _ui.value.copy(account = acc ?: _ui.value.account, configs = emptyList(), blockMessage = e.message)
+                    val msg = if (e.code == "QUOTA_EXCEEDED") e.message.ifBlank { VpnStatus.QUOTA_MESSAGE_FA } else e.message
+                    _ui.value = _ui.value.copy(account = acc ?: _ui.value.account, configs = emptyList(), blockMessage = msg, blockCode = e.code)
                     if (vpn.value.phase != Phase.DISCONNECTED) AppVpnService.stop(getApplication())
                 }
                 // 5xx / proxy / unexpected answers are transient: never stop a working tunnel for them
@@ -119,7 +123,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             Phase.DISCONNECTED -> {
                 val s = _ui.value
                 when {
-                    s.blockMessage != null -> _ui.value = s.copy(info = s.blockMessage)
+                    s.blockMessage != null -> _ui.value = s.copy(info = if (s.blockCode == "QUOTA_EXCEEDED") VpnStatus.QUOTA_MESSAGE_FA else s.blockMessage)
                     s.configs.isEmpty() -> _ui.value = s.copy(info = "سرور فعالی برای حساب شما وجود ندارد.")
                     else -> startWithPermission()
                 }

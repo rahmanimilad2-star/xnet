@@ -303,7 +303,9 @@ fun MainScaffold(
     val context = LocalContext.current
 
     LaunchedEffect(ui.info) { ui.info?.let { snack.showSnackbar(it) } }
-    LaunchedEffect(vpn.error) { vpn.error?.let { snack.showSnackbar(it) } }
+    LaunchedEffect(vpn.error) {
+        vpn.error?.let { snack.showSnackbar(if (vpn.isQuotaExceeded) (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it) }
+    }
     LaunchedEffect(vpn.stopCode) { if (vpn.stopCode != null) vm.refreshNow() }
 
     Scaffold(
@@ -336,7 +338,9 @@ fun MainScaffold(
 // ------------------------------------------------------------------------------------- home
 private data class PhaseLook(val label: String, val color: Color, val deep: Color)
 
-private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.isError) {
+private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.phase == Phase.DISCONNECTED && vpn.isQuotaExceeded) {
+    PhaseLook(if (english) "Data used up" else "حجم تمام شد", Bad, Color(0xFFB91C1C))
+} else if (vpn.isError) {
     PhaseLook(if (english) "Connection failed" else "خطا در اتصال", Bad, Color(0xFFB91C1C))
 } else when (vpn.phase) {
     Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Ok, OkDeep)
@@ -361,7 +365,8 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     }
     val country = ui.configs.firstOrNull { it.id == vpn.configId }?.country ?: selectedCfg?.country
     val hint = when (vpn.phase) {
-        Phase.DISCONNECTED -> if (vpn.isError) (if (english) "Tap to try again" else "برای تلاش دوباره، دکمه را لمس کنید")
+        Phase.DISCONNECTED -> if (vpn.isQuotaExceeded || ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA)
+            else if (vpn.isError) (if (english) "Tap to try again" else "برای تلاش دوباره، دکمه را لمس کنید")
             else if (english) "Tap to connect securely" else "برای اتصال امن، دکمه را لمس کنید"
         // real step from the connection owner (refreshing / measuring ping / connecting to X / waiting for internet)
         Phase.CONNECTING, Phase.RECONNECTING -> vpn.detail?.takeIf { !english }
@@ -406,7 +411,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                         }
                         StatusPill(look.label, color, pulsing = vpn.phase == Phase.CONNECTING || vpn.phase == Phase.RECONNECTING)
                     }
-                    ui.blockMessage?.let { Banner(it, Bad) }
+                    ui.blockMessage?.let { Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
                 }
 
                 Column(Modifier.padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -997,7 +1002,7 @@ fun AccountScreen(
 
         item {
             AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
-            SupportCard(english)
+            SupportCard()
         }
 
         item {
@@ -1176,7 +1181,7 @@ private fun AccountActionRow(
 }
 
 @Composable
-private fun SupportCard(english: Boolean) {
+private fun SupportCard() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     Surface(
         modifier = Modifier

@@ -17,8 +17,21 @@ data class VpnStatus(
     /** What the connection owner is doing right now (refreshing, measuring ping, waiting for internet…). */
     val detail: String? = null,
 ) {
-    /** ERROR = stopped because something failed (vs. a clean user disconnect). */
-    val isError: Boolean get() = phase == Phase.DISCONNECTED && error != null
+    /** Backend said the data quota is used up (code QUOTA_EXCEEDED). Not a network/VPN error. */
+    val isQuotaExceeded: Boolean get() = stopCode == "QUOTA_EXCEEDED"
+
+    /** Stopped because the backend explicitly denied service (quota / expiry / blocked / no server). */
+    val isServiceDenied: Boolean get() = stopCode in SERVICE_DENIAL_CODES
+
+    /** ERROR = stopped because something technically failed (network, server, VPN), not a service denial. */
+    val isError: Boolean get() = phase == Phase.DISCONNECTED && error != null && !isServiceDenied
+
+    companion object {
+        val SERVICE_DENIAL_CODES = setOf("QUOTA_EXCEEDED", "EXPIRED", "BLOCKED", "NO_CONFIG")
+        /** Same text the backend sends (STATUS_MESSAGES.QUOTA_EXCEEDED); used if a message is missing. */
+        const val QUOTA_MESSAGE_FA = "حجم اشتراک شما تمام شده است."
+        const val QUOTA_MESSAGE_EN = "Your subscription data has run out."
+    }
 }
 
 object VpnState {

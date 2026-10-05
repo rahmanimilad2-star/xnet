@@ -274,7 +274,7 @@
             <button class="btn sm ghost" data-act="edit" data-id="${u.id}">ویرایش</button>
             <button class="btn sm ghost" data-act="renew" data-id="${u.id}">تمدید</button>
             <button class="btn sm ghost" data-act="toggle" data-id="${u.id}">${u.user_status === 'blocked' ? 'رفع مسدودی' : 'مسدود'}</button>
-            <button class="btn sm ${u.device_session_active ? 'primary-soft' : 'ghost'}" data-act="release" data-id="${u.id}" ${u.device_session_active ? '' : 'disabled title="دستگاه فعالی وجود ندارد"'}>${u.device_session_active ? 'آزادسازی دستگاه' : 'بدون دستگاه فعال'}</button>
+            <button class="btn sm ${u.device_session_active ? 'primary-soft' : 'ghost'}" data-act="release" data-id="${u.id}" ${u.device_session_active ? '' : 'disabled title="این کاربر Session فعالی ندارد"'}>${u.device_session_active ? 'Reset Session' : 'بدون Session فعال'}</button>
             <button class="btn sm ghost" data-act="del" data-id="${u.id}">حذف</button>
           </div></td></tr>`).join('') || `<tr><td colspan="6" class="empty">${q ? 'کاربری با این جستجو پیدا نشد' : 'هنوز کاربری ساخته نشده است'}</td></tr>`;
       paint($('#users-body'));
@@ -294,11 +294,11 @@
     if (act === 'edit') userForm(u);
     if (act === 'renew') renewForm(u);
     if (act === 'toggle') { const r = await api('PUT', `/api/admin/users/${u.id}`, { status: u.user_status === 'blocked' ? 'active' : 'blocked' }); closeModal(); toast(`وضعیت تغییر کرد${xuiErr(r)}`, !!r.xui_errors?.length); reload(); }
-    if (act === 'release' && confirmBox(`دستگاه فعال کاربر «${u.username}» آزاد شود؟ نشست فعلی باطل می‌شود و دستگاه دیگری می‌تواند وارد شود.`)) {
+    if (act === 'release' && confirmBox(`Session کاربر «${u.username}» ریست شود؟ ورود فعلی او باطل می‌شود و می‌تواند دوباره با نام کاربری و رمز خودش وارد شود. حساب، اشتراک و حجم تغییری نمی‌کند.`)) {
       const r = await api('POST', `/api/admin/users/${u.id}/release-device`);
       const released = !!r.released;
       closeModal();
-      toast(released ? 'دستگاه آزاد شد؛ ورود بعدی مجاز است' : 'برای این کاربر دستگاه فعال وجود ندارد', false);
+      toast(released ? 'Session ریست شد؛ کاربر می‌تواند دوباره وارد شود' : 'این کاربر Session فعالی نداشت', false);
       reload();
     }
     if (act === 'provision') { const r = await api('POST', `/api/admin/users/${u.id}/provision`); closeModal(); toast(`Provisioning انجام شد${provisionMsg(r.provision)}`, r.provision.errors.length > 0); reload(); }
@@ -321,7 +321,7 @@
           <button class="btn sm" data-uact="renew">تمدید / حجم</button>
           <button class="btn sm" data-uact="provision">${ic('refresh')}Re-provision</button>
           <button class="btn sm" data-uact="toggle">${u.user_status === 'blocked' ? 'رفع مسدودی' : 'مسدود'}</button>
-          <button class="btn sm ${u.device_session_active ? 'primary-soft' : 'ghost'}" data-uact="release" ${u.device_session_active ? '' : 'disabled title="دستگاه فعالی وجود ندارد"'}>${u.device_session_active ? 'آزادسازی دستگاه' : 'بدون دستگاه فعال'}</button>
+          <button class="btn sm ${u.device_session_active ? 'primary-soft' : 'ghost'}" data-uact="release" ${u.device_session_active ? '' : 'disabled title="این کاربر Session فعالی ندارد"'}>${u.device_session_active ? 'Reset Session' : 'بدون Session فعال'}</button>
           <button class="btn sm danger" data-uact="del">حذف</button>
         </div>
       </div>
