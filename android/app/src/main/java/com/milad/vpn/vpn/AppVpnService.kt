@@ -179,7 +179,7 @@ class AppVpnService : VpnService() {
         var lastError: String? = null
         // Deliberately sequential: establish A, probe A, release A if it failed, then try B.
         for (cfg in list) {
-            if (!isCurrent(generation) || !isActive) return
+            if (!isCurrent(generation) || !currentCoroutineContext().isActive) return
             if (!updateIfCurrent(generation) {
                     it.copy(
                         phase = if (reconnect) Phase.RECONNECTING else Phase.CONNECTING,
@@ -192,13 +192,13 @@ class AppVpnService : VpnService() {
 
             try {
                 if (!startCore(cfg, generation)) return
-                if (!isCurrent(generation) || !isActive) {
+                if (!isCurrent(generation) || !currentCoroutineContext().isActive) {
                     stopCore(generation)
                     return
                 }
                 val delayMs = measureDelay(generation)
                 if (delayMs != null && delayMs in 0..MAX_DELAY_MS &&
-                    isCurrent(generation) && isActive
+                    isCurrent(generation) && currentCoroutineContext().isActive
                 ) {
                     val connected = synchronized(lifecycleLock) {
                         if (lifecycleGeneration != generation) {
@@ -394,7 +394,7 @@ class AppVpnService : VpnService() {
     private suspend fun runMonitor(generation: Long) {
             var lastAccountCheck = System.currentTimeMillis()
             var lastConfigSync = System.currentTimeMillis()
-            while (isActive) {
+            while (currentCoroutineContext().isActive) {
                 delay(1000)
                 if (!isCurrent(generation)) return
 
