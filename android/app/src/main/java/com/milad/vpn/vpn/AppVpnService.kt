@@ -438,12 +438,6 @@ class AppVpnService : VpnService() {
                         return
                     }
                 }
-                // core died unexpectedly -> failover
-                if (isCurrent(generation) && !isCoreRunning(generation) &&
-                    VpnState.status.value.phase == Phase.CONNECTED) {
-                    connect(Repository.configsToTry(), reconnect = true)
-                    return
-                }
             }
     }
 
