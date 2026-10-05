@@ -1002,7 +1002,7 @@ fun AccountScreen(
 
         item {
             AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
-            SupportCard()
+            SupportCard(english)
         }
 
         item {
@@ -1181,7 +1181,7 @@ private fun AccountActionRow(
 }
 
 @Composable
-private fun SupportCard() {
+private fun SupportCard(english: Boolean) {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     Surface(
         modifier = Modifier
