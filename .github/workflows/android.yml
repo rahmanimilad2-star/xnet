@@ -52,7 +52,7 @@ jobs:
         env:
           VPN_KEYSTORE_B64: ${{ secrets.VPN_KEYSTORE }}
         run: |
-          echo "$VPN_KEYSTORE_B64" | base64 --decode --strict > xnet-release.keystore
+          echo "$VPN_KEYSTORE_B64" | base64 --decode > xnet-release.keystore
           chmod 600 xnet-release.keystore
 
       - name: assembleRelease
