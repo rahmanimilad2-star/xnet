@@ -30,13 +30,19 @@ data class UiState(
     val info: String? = null,
 )
 
+private val DENIAL_CODES = setOf("QUOTA_EXCEEDED", "EXPIRED", "BLOCKED", "NO_CONFIG")
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
     val vpn = VpnState.status
     private var syncJob: Job? = null
 
-    init { if (Repository.isLoggedIn) startSync() else viewModelScope.launch { flushPendingRelease() } }
+    init {
+        if (Repository.isLoggedIn) startSync() else viewModelScope.launch { flushPendingRelease() }
+        // the VPN service refreshes /api/v1/configs too (every sync_after_seconds); show its account data
+        viewModelScope.launch { Repository.account.collect { a -> if (a != null && _ui.value.loggedIn) _ui.value = _ui.value.copy(account = a) } }
+    }
 
     fun login(username: String, password: String) {
         if (username.isBlank() || password.isBlank()) { _ui.value = _ui.value.copy(loginError = "نام کاربری و رمز عبور را وارد کنید"); return }
@@ -74,21 +80,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val (acc, bundle) = Repository.api.configs()
             val oldVersion = Repository.session.loadConfigs()?.version
             Repository.session.saveConfigs(bundle)
-            _ui.value = _ui.value.copy(account = acc, configs = bundle.configs, blockMessage = null, info = null)
-            if (oldVersion != null && oldVersion != bundle.version && vpn.value.phase == Phase.CONNECTED) {
-                AppVpnService.reload(getApplication()) // apply panel changes without app update
+            Repository.publishAccount(acc)
+            _ui.value = _ui.value.copy(
+                account = acc, configs = bundle.configs, blockMessage = null, info = null,
+                // the service may have switched a removed manual location back to Auto
+                selectedConfigId = Repository.session.selectedConfigId,
+            )
+            if (oldVersion != null && oldVersion != bundle.version && vpn.value.phase != Phase.DISCONNECTED) {
+                // Only a signal: the service compares with the RUNNING config and reconnects only if it changed/was removed.
+                runCatching { AppVpnService.reload(getApplication()) }
             }
             return bundle.syncAfterSeconds.coerceIn(30, 3600)
         } catch (e: ApiException) {
             when (e.code) {
                 "UNAUTHORIZED" -> { logout(releaseOnServer = false) } // server already ended this session
                 "NETWORK" -> _ui.value = _ui.value.copy(info = e.message)
-                else -> {
+                in DENIAL_CODES -> {
                     // QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG
                     val acc = e.account ?: runCatching { Repository.api.account() }.getOrNull()
                     _ui.value = _ui.value.copy(account = acc ?: _ui.value.account, configs = emptyList(), blockMessage = e.message)
                     if (vpn.value.phase != Phase.DISCONNECTED) AppVpnService.stop(getApplication())
                 }
+                // 5xx / proxy / unexpected answers are transient: never stop a working tunnel for them
+                else -> _ui.value = _ui.value.copy(info = e.message)
             }
             return 60
         }

@@ -13,7 +13,7 @@ object XrayConfigBuilder {
         "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "169.254.0.0/16", "fc00::/7", "fe80::/10", "::1/128",
     )
 
-    fun build(outboundJson: String, dnsServers: List<String> = listOf("1.1.1.1", "8.8.8.8")): String {
+    private fun proxyOutbound(outboundJson: String): JSONObject {
         val proxy = JSONObject(outboundJson).put("tag", "proxy")
         // keep connections alive across short network blips
         proxy.optJSONObject("streamSettings")?.let { ss ->
@@ -21,6 +21,24 @@ object XrayConfigBuilder {
             sockopt.put("tcpKeepAliveInterval", 30)
             ss.put("sockopt", sockopt)
         }
+        return proxy
+    }
+
+    /**
+     * Config for a latency probe (Libv2ray.measureOutboundDelay): the SAME proxy outbound the tunnel
+     * would use, no inbounds, no TUN. The probe core keeps only outbound/dispatcher/log, so the first
+     * outbound ("proxy") carries the test request.
+     */
+    fun buildProbe(outboundJson: String): String {
+        val root = JSONObject()
+        root.put("log", JSONObject().put("loglevel", "warning"))
+        root.put("inbounds", JSONArray())
+        root.put("outbounds", JSONArray().put(proxyOutbound(outboundJson)).put(JSONObject().put("tag", "direct").put("protocol", "freedom")))
+        return root.toString()
+    }
+
+    fun build(outboundJson: String, dnsServers: List<String> = listOf("1.1.1.1", "8.8.8.8")): String {
+        val proxy = proxyOutbound(outboundJson)
 
         val root = JSONObject()
         root.put("log", JSONObject().put("loglevel", "warning"))

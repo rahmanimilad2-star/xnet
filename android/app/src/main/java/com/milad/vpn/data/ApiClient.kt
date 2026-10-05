@@ -62,6 +62,11 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
         call("POST", "/api/v1/auth/logout", JSONObject(), bearer = token); true
     } catch (e: ApiException) { e.code != "NETWORK" }
 
+    /** true if our backend answered at all (any HTTP status) over the real network; false = unreachable. */
+    suspend fun reachable(): Boolean = try {
+        call("GET", "/api/v1/account"); true
+    } catch (e: ApiException) { e.code != "NETWORK" }
+
     suspend fun account(): Account = Account.from(call("GET", "/api/v1/account").getJSONObject("account"))
 
     suspend fun configs(): Pair<Account, ConfigBundle> {

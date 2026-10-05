@@ -165,6 +165,10 @@ test('app: login, account and allowed configs only', async () => {
   r = await call('GET', '/api/v1/configs', { token: aliToken });
   assert.deepEqual(r.body.configs.map((c) => c.id), [cfgAli.id, cfgAll.id]);
   const v1 = r.body.version;
+  // contract the app relies on: 5-minute sync and a version that is stable while data is unchanged
+  assert.equal(r.body.sync_after_seconds, 300);
+  assert.match(v1, /^[0-9a-f]{40}$/);
+  assert.equal((await call('GET', '/api/v1/configs', { token: aliToken })).body.version, v1);
   // replace link of a config from the panel -> app receives new one on next sync
   await call('PUT', `/api/admin/configs/${cfgAli.id}`, { cookie: adminCookie, body: { link: VLESS_ALI.replace('nl.example.com:443', 'nl2.example.com:2083') } });
   r = await call('GET', '/api/v1/configs', { token: aliToken });

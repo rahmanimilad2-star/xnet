@@ -7,13 +7,19 @@ import libv2ray.CoreController
 import libv2ray.Libv2ray
 
 /**
- * The ONLY place that talks to the native Xray core (AndroidLibXrayLite / libv2ray.aar).
- * Written against the CoreController API (AndroidLibXrayLite v25.x+). If your aar version
- * exposes different method names, adapt this file only.
+ * The ONLY place that talks to the native Xray core (AndroidLibXrayLite / libv2ray.aar v26.9.30).
+ * Used API: Libv2ray.initCoreEnv / checkVersionX / newCoreController / measureOutboundDelay,
+ * CoreController.startLoop / stopLoop / isRunning / measureDelay.
  */
 object XrayCore {
     private const val TAG = "XrayCore"
-    private var controller: CoreController? = null
+    /** Same URL for ranking probes and in-tunnel checks, so the numbers are comparable. */
+    const val DELAY_URL = "https://www.gstatic.com/generate_204"
+
+    /** Written only inside the synchronized start/stop; read lock-free by measureDelay(). */
+    @Volatile private var controller: CoreController? = null
+
+    data class Delay(val ms: Long?, val error: String?)
 
     private val callback = object : CoreCallbackHandler {
         override fun startup(): Long { Log.i(TAG, "core started"); return 0 }
@@ -34,7 +40,7 @@ object XrayCore {
     fun start(configJson: String, tunFd: Int) {
         stop()
         val c = Libv2ray.newCoreController(callback)
-        c.startLoop(configJson, tunFd) // throws on invalid config / start failure
+        c.startLoop(configJson, tunFd) // synchronous; throws on invalid config / start failure
         controller = c
     }
 
@@ -44,8 +50,24 @@ object XrayCore {
         controller = null
     }
 
-    /** Real HTTP round-trip through the running proxy; returns delay in ms or -1 on failure. */
-    fun measureDelay(url: String = "https://www.gstatic.com/generate_204"): Long =
-        runCatching { controller?.measureDelay(url) ?: -1L }.getOrDefault(-1L)
+    /**
+     * Real HTTP round-trip through the RUNNING tunnel core (same routing the user's traffic takes).
+     * Returns ms, or -1 on failure. Not synchronized on purpose: a slow probe must never block stop().
+     */
+    fun measureDelay(url: String = DELAY_URL): Long {
+        val c = controller ?: return -1L
+        return runCatching { c.measureDelay(url) }.getOrDefault(-1L)
+    }
 
+    /**
+     * Latency of ONE config before connecting: a temporary Xray instance (no TUN, no inbound) dials
+     * through exactly this outbound. Independent of the running core, safe to run in parallel.
+     * Our package is excluded from the VPN, so probe sockets always use the real network.
+     */
+    fun probe(outboundJson: String, url: String = DELAY_URL): Delay = try {
+        val ms = Libv2ray.measureOutboundDelay(XrayConfigBuilder.buildProbe(outboundJson), url)
+        if (ms > 0) Delay(ms, null) else Delay(null, "بدون پاسخ")
+    } catch (e: Exception) {
+        Delay(null, e.message?.take(160) ?: "خطای نامشخص")
+    }
 }

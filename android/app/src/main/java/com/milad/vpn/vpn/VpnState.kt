@@ -14,7 +14,12 @@ data class VpnStatus(
     val error: String? = null,
     /** Server-side reason we stopped (QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG / UNAUTHORIZED) */
     val stopCode: String? = null,
-)
+    /** What the connection owner is doing right now (refreshing, measuring ping, waiting for internet…). */
+    val detail: String? = null,
+) {
+    /** ERROR = stopped because something failed (vs. a clean user disconnect). */
+    val isError: Boolean get() = phase == Phase.DISCONNECTED && error != null
+}
 
 object VpnState {
     private val _status = MutableStateFlow(VpnStatus())

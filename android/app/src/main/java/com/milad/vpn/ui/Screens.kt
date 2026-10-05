@@ -336,7 +336,9 @@ fun MainScaffold(
 // ------------------------------------------------------------------------------------- home
 private data class PhaseLook(val label: String, val color: Color, val deep: Color)
 
-private fun phaseLook(phase: Phase, english: Boolean): PhaseLook = when (phase) {
+private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.isError) {
+    PhaseLook(if (english) "Connection failed" else "خطا در اتصال", Bad, Color(0xFFB91C1C))
+} else when (vpn.phase) {
     Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Ok, OkDeep)
     Phase.CONNECTING -> PhaseLook(if (english) "Connecting…" else "در حال اتصال…", Warn, Color(0xFFEA580C))
     Phase.RECONNECTING -> PhaseLook(if (english) "Reconnecting…" else "در حال اتصال مجدد…", Warn, Color(0xFFEA580C))
@@ -345,7 +347,7 @@ private fun phaseLook(phase: Phase, english: Boolean): PhaseLook = when (phase) 
 
 @Composable
 fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onOpenAccount: () -> Unit = {}, onToggle: () -> Unit) {
-    val look = phaseLook(vpn.phase, english)
+    val look = phaseLook(vpn, english)
     val color by animateColorAsState(look.color, tween(500), label = "phase")
     val auto = ui.selectedConfigId < 0
     val selectedCfg = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
@@ -359,8 +361,11 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     }
     val country = ui.configs.firstOrNull { it.id == vpn.configId }?.country ?: selectedCfg?.country
     val hint = when (vpn.phase) {
-        Phase.DISCONNECTED -> if (english) "Tap to connect securely" else "برای اتصال امن، دکمه را لمس کنید"
-        Phase.CONNECTING, Phase.RECONNECTING -> if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
+        Phase.DISCONNECTED -> if (vpn.isError) (if (english) "Tap to try again" else "برای تلاش دوباره، دکمه را لمس کنید")
+            else if (english) "Tap to connect securely" else "برای اتصال امن، دکمه را لمس کنید"
+        // real step from the connection owner (refreshing / measuring ping / connecting to X / waiting for internet)
+        Phase.CONNECTING, Phase.RECONNECTING -> vpn.detail?.takeIf { !english }
+            ?: if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
         Phase.CONNECTED -> if (english) "Your connection is secured" else "اتصال شما امن است"
     }
 
@@ -729,7 +734,16 @@ private fun DetailRow(
 fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
     val context = LocalContext.current
     var reveal by rememberSaveable { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth(), shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainerHigh),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    ) {
         // header: identity + status
         Row(
             Modifier.fillMaxWidth()
@@ -935,19 +949,20 @@ fun AccountScreen(
         Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
+                Brush.linearGradient(
                     listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.035f),
                         MaterialTheme.colorScheme.background,
                     ),
                 ),
             ),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (acc != null) {
             item { AccountHero(acc, english) }
-            item { AccountSectionTitle(if (english) "Subscription" else "اشتراک") }
+            item { AccountSectionTitle(if (english) "Subscription" else "اشتراک", english) }
             item { SubscriptionPanel(acc, password, english) }
         } else {
             item {
@@ -960,7 +975,7 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Preferences" else "تنظیمات")
+            AccountSectionTitle(if (english) "Preferences" else "تنظیمات", english)
             AccountSettingsCard {
                 SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک") {
                     Switch(checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) })
@@ -981,42 +996,31 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Support" else "پشتیبانی")
-            SupportCard(english)
+            AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
+            SupportCard()
         }
 
         item {
-            OutlinedButton(
-                onClick = { vibrate(context); onRefresh() },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Icon(Icons.Filled.Refresh, null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (english) "Refresh account" else "به‌روزرسانی حساب", fontWeight = FontWeight.SemiBold)
-            }
-        }
-        item {
-            Button(
-                onClick = { vibrate(context); confirm = true },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Bad.copy(alpha = 0.12f),
-                    contentColor = Bad,
-                ),
-                elevation = null,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (english) "Sign out" else "خروج از حساب", fontWeight = FontWeight.Bold)
+            AccountSectionTitle(if (english) "Account actions" else "مدیریت حساب", english)
+            AccountSettingsCard {
+                AccountActionRow(
+                    icon = Icons.Filled.Refresh,
+                    title = if (english) "Refresh account" else "به‌روزرسانی حساب",
+                    subtitle = if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب",
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = { vibrate(context); onRefresh() },
+                )
+                HorizontalDivider(
+                    Modifier.padding(start = 54.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f),
+                )
+                AccountActionRow(
+                    icon = Icons.AutoMirrored.Filled.Logout,
+                    title = if (english) "Sign out" else "خروج از حساب",
+                    subtitle = if (english) "Remove this account from this device" else "خروج امن از این دستگاه",
+                    tint = Bad,
+                    onClick = { vibrate(context); confirm = true },
+                )
             }
         }
         item { Spacer(Modifier.height(8.dp)) }
@@ -1051,7 +1055,7 @@ private fun AccountHero(acc: Account, english: Boolean) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
@@ -1064,8 +1068,8 @@ private fun AccountHero(acc: Account, english: Boolean) {
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                            BrandDeep.copy(alpha = 0.10f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            BrandDeep.copy(alpha = 0.08f),
                         ),
                     ),
                 )
@@ -1109,14 +1113,14 @@ private fun AccountHero(acc: Account, english: Boolean) {
 }
 
 @Composable
-private fun AccountSectionTitle(title: String) {
+private fun AccountSectionTitle(title: String, english: Boolean) {
     Text(
-        title.uppercase(),
+        if (english) title.uppercase() else title,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
         color = muted(),
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
-        letterSpacing = 0.8.sp,
+        letterSpacing = if (english) 0.8.sp else 0.sp,
     )
 }
 
@@ -1125,28 +1129,66 @@ private fun AccountSettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f),
+        ),
+        shadowElevation = 3.dp,
     ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 7.dp), content = content)
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), content = content)
     }
 }
 
 @Composable
-private fun SupportCard(english: Boolean) {
+private fun AccountActionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 66.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold, color = tint)
+            Text(subtitle, fontSize = 12.sp, color = muted(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = muted())
+    }
+}
+
+@Composable
+private fun SupportCard() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { uriHandler.openUri("https://t.me/rahmani208") },
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         ),
-        shadowElevation = 2.dp,
+        shadowElevation = 3.dp,
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 14.dp),

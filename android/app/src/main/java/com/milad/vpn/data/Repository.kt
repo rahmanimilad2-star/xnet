@@ -1,6 +1,8 @@
 package com.milad.vpn.data
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /** Process-wide access to session + API (used by both UI and the VPN service). */
 object Repository {
@@ -16,14 +18,13 @@ object Repository {
 
     val isLoggedIn get() = session.token != null
 
-    /** Ordered list to try: the selected server first (if any), then the rest by priority. */
-    fun configsToTry(): List<VpnConfig> {
-        val all = session.loadConfigs()?.configs.orEmpty().sortedBy { it.priority }
-        val sel = session.selectedConfigId
-        if (sel < 0) return all
-        val chosen = all.firstOrNull { it.id == sel } ?: return all
-        return listOf(chosen) + all.filter { it.id != sel }
-    }
+    /** Latest account from ANY successful /api/v1/configs refresh (UI or VPN service). */
+    private val _account = MutableStateFlow<Account?>(null)
+    val account: StateFlow<Account?> = _account
+    fun publishAccount(a: Account) { _account.value = a }
 
-    fun logout() = session.clear()
+    fun logout() {
+        session.clear()
+        _account.value = null
+    }
 }

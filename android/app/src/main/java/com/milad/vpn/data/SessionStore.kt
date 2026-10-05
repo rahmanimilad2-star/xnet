@@ -35,7 +35,7 @@ class SessionStore(context: Context) {
         get() = prefs.getString("password", null)
         set(v) = prefs.edit().putString("password", v).apply()
 
-    /** -1 = automatic (priority order + failover) */
+    /** -1 = Auto (lowest real latency + failover); otherwise that location only */
     var selectedConfigId: Long
         get() = prefs.getLong("selected_config", -1L)
         set(v) = prefs.edit().putLong("selected_config", v).apply()
