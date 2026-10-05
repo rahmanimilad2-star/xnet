@@ -57,7 +57,7 @@ jobs:
 
       - name: assembleRelease
         env:
-          VPN_KEYSTORE: xnet-release.keystore
+          VPN_KEYSTORE: ../xnet-release.keystore
           VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
           VPN_KEY_ALIAS: ${{ secrets.VPN_KEY_ALIAS }}
         run: ./gradlew --no-daemon assembleRelease -PvpnApiBaseUrl=https://core.xnetify.ir
