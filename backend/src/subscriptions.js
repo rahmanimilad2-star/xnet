@@ -9,6 +9,7 @@ const { getDb, tx } = require('./db');
 const { config } = require('./config');
 const { parseLink } = require('./links');
 const { audit } = require('./services');
+const settings = require('./settings');
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -18,7 +19,7 @@ function fetchText(urlStr, redirects = 3) {
     try { u = new URL(urlStr); } catch { return reject(new Error('آدرس Subscription نامعتبر است')); }
     if (!/^https?:$/.test(u.protocol)) return reject(new Error('فقط http/https مجاز است'));
     const lib = u.protocol === 'https:' ? https : http;
-    const req = lib.get(u, { timeout: 15000, headers: { 'User-Agent': 'v2rayNG/1.8.0', Accept: '*/*' }, rejectUnauthorized: !config.xuiInsecureTls }, (res) => {
+    const req = lib.get(u, { timeout: 15000, headers: { 'User-Agent': 'v2rayNG/1.8.0', Accept: '*/*' }, rejectUnauthorized: !settings.get('xui_allow_insecure_tls') }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
         return resolve(fetchText(new URL(res.headers.location, u).toString(), redirects - 1));
@@ -109,10 +110,38 @@ async function refreshAll(log = console.log) {
 }
 
 function startSubscriptionRefresher(log = console.log) {
-  if (!config.subRefreshMin) return null;
-  const t = setInterval(() => refreshAll(log).catch((e) => log(`[subscription] ${e.message}`)), config.subRefreshMin * 60000);
-  t.unref();
-  return t;
+  let stopped = false;
+  let timer = null;
+
+  const schedule = (delayMs) => {
+    if (stopped) return;
+    timer = setTimeout(run, delayMs);
+    timer.unref();
+  };
+
+  const run = async () => {
+    if (stopped) return;
+
+    try {
+      if (settings.get('sync_enabled')) {
+        await refreshAll(log);
+      }
+    } catch (e) {
+      log(`[subscription] ${e.message}`);
+    }
+
+    const interval = settings.get('subscription_refresh_minutes');
+    schedule(Math.max(1000, interval * 60000));
+  };
+
+  schedule(3000);
+
+  return {
+    stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
 }
 
 module.exports = { refreshSubscription, refreshAll, startSubscriptionRefresher, parseBody, decodeBody, fetchText };

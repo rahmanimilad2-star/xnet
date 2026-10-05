@@ -8,6 +8,7 @@ const { buildShareLink } = require('./xuilink');
 const { parseLink } = require('./links');
 const { audit, subscriptionStatus, getUsage } = require('./services');
 const { config } = require('./config');
+const settings = require('./settings');
 
 const SUPPORTED = new Set(['vless', 'vmess', 'trojan', 'shadowsocks']);
 
@@ -33,7 +34,7 @@ function createUserSubscription(user) {
   const existing = userSubscription(user);
   if (existing) return existing;
   const token = crypto.randomBytes(24).toString('hex');
-  const base = config.publicUrl ? config.publicUrl.replace(/\/+$/, '') : '';
+  const base = settings.get('public_url');
   const url = `${base}/api/v1/subscriptions/${token}`;
   const now = Date.now();
   const result = getDb().prepare(`INSERT INTO subscriptions(name,url,country,priority,scope,user_ids,group_ids,enabled,created_at,updated_at)

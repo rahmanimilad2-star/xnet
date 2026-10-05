@@ -180,6 +180,16 @@ function migrate(d) {
   d.prepare('UPDATE schema_version SET version = 4 WHERE version < 4').run();
   // v5: user_sessions (created by SCHEMA above, CREATE TABLE IF NOT EXISTS)
   d.prepare('UPDATE schema_version SET version = 5 WHERE version < 5').run();
+
+  // v6: runtime-editable admin settings
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+  d.prepare('UPDATE schema_version SET version = 6 WHERE version < 6').run();
 }
 
 let db;

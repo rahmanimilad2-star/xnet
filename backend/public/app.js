@@ -870,19 +870,240 @@
 
   // ----------------------------------------------------------- settings
   pages.settings = async () => {
-    $('#page').innerHTML = `${pageHead('تنظیمات', 'امنیت حساب مدیر')}
-      <form class="card card-pad narrow-form" id="pw-form">
-        <h3 class="m0">تغییر رمز مدیر</h3>
-        <label>رمز فعلی<input name="current" class="ltr" type="password" required autocomplete="current-password"></label>
-        <label>رمز جدید<input name="next" class="ltr" type="password" minlength="10" required autocomplete="new-password"><span class="hint">حداقل ۱۰ کاراکتر؛ بعد از تغییر دوباره وارد می‌شوید</span></label>
-        <p class="error"></p><div><button class="btn primary" type="submit">تغییر رمز</button></div></form>`;
+    const r = await api('GET', '/api/admin/settings');
+    const s = r.settings || {};
+
+    const checked = (v) => v ? 'checked' : '';
+
+    $('#page').innerHTML = `${pageHead('تنظیمات', 'مدیریت کامل تنظیمات سیستم')}
+
+      <div class="settings-grid">
+
+        <form class="card card-pad" id="runtime-settings-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">تنظیمات نشست و امنیت</h3>
+              <div class="hint">مدیریت اعتبار ورود و محدودیت تلاش‌های ناموفق</div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              اعتبار Token کاربر (ساعت)
+              <input name="user_token_ttl_hours" type="number" min="1" max="87600"
+                value="${esc(s.user_token_ttl_hours)}" required>
+            </label>
+
+            <label>
+              اعتبار Token مدیر (ساعت)
+              <input name="admin_token_ttl_hours" type="number" min="1" max="87600"
+                value="${esc(s.admin_token_ttl_hours)}" required>
+            </label>
+
+            <label>
+              حداکثر تلاش ورود
+              <input name="login_max_attempts" type="number" min="1" max="1000"
+                value="${esc(s.login_max_attempts)}" required>
+            </label>
+
+            <label>
+              بازه محدودیت ورود (دقیقه)
+              <input name="login_window_minutes" type="number" min="1" max="1440"
+                value="${esc(s.login_window_minutes)}" required>
+            </label>
+          </div>
+        </form>
+
+        <form class="card card-pad" id="subscription-settings-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">تنظیمات اشتراک</h3>
+              <div class="hint">مقادیر پیش‌فرض هنگام ساخت کاربر جدید</div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              حجم پیش‌فرض کاربر (GB)
+              <input name="default_quota_gb" type="number" min="0" max="1000000"
+                value="${esc(s.default_quota_gb)}" required>
+              <span class="hint">۰ یعنی نامحدود</span>
+            </label>
+
+            <label>
+              مدت پیش‌فرض اشتراک (روز)
+              <input name="default_subscription_days" type="number" min="0" max="36500"
+                value="${esc(s.default_subscription_days)}" required>
+              <span class="hint">۰ یعنی بدون تاریخ انقضا</span>
+            </label>
+          </div>
+        </form>
+
+        <form class="card card-pad" id="sync-settings-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">همگام‌سازی</h3>
+              <div class="hint">کنترل Sync آمار و بروزرسانی اشتراک‌ها</div>
+            </div>
+          </div>
+
+          <label class="toggle-row">
+            <input name="sync_enabled" type="checkbox" ${checked(s.sync_enabled)}>
+            <span>
+              <strong>فعال بودن همگام‌سازی</strong>
+              <small>Sync آمار 3X-UI و Refresh اشتراک‌ها</small>
+            </span>
+          </label>
+
+          <div class="form-grid">
+            <label>
+              فاصله Sync آمار (ثانیه)
+              <input name="stats_interval_seconds" type="number" min="5" max="86400"
+                value="${esc(s.stats_interval_seconds)}" required>
+            </label>
+
+            <label>
+              Refresh اشتراک‌ها (دقیقه)
+              <input name="subscription_refresh_minutes" type="number" min="1" max="43200"
+                value="${esc(s.subscription_refresh_minutes)}" required>
+            </label>
+          </div>
+        </form>
+
+        <form class="card card-pad" id="xui-settings-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">3X-UI</h3>
+              <div class="hint">نحوه اعمال محدودیت‌ها روی پنل‌های 3X-UI</div>
+            </div>
+          </div>
+
+          <label class="toggle-row">
+            <input name="enforce_on_xui" type="checkbox" ${checked(s.enforce_on_xui)}>
+            <span>
+              <strong>اعمال محدودیت روی 3X-UI</strong>
+              <small>حجم، انقضا و وضعیت کاربر روی کلاینت 3X-UI اعمال شود</small>
+            </span>
+          </label>
+
+          <label class="toggle-row">
+            <input name="xui_allow_insecure_tls" type="checkbox" ${checked(s.xui_allow_insecure_tls)}>
+            <span>
+              <strong>اجازه TLS ناامن</strong>
+              <small>فقط برای پنل‌هایی که گواهی TLS معتبر ندارند</small>
+            </span>
+          </label>
+        </form>
+
+        <form class="card card-pad" id="system-settings-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">سیستم</h3>
+              <div class="hint">آدرس عمومی سرویس اشتراک</div>
+            </div>
+          </div>
+
+          <label>
+            Public URL
+            <input name="public_url" class="ltr" type="url"
+              value="${esc(s.public_url || '')}"
+              placeholder="https://core.xnetify.ir">
+            <span class="hint">برای ساخت لینک عمومی اشتراک‌ها استفاده می‌شود.</span>
+          </label>
+        </form>
+
+        <form class="card card-pad" id="pw-form">
+          <div class="section-head">
+            <div>
+              <h3 class="m0">حساب مدیر</h3>
+              <div class="hint">تغییر رمز ورود به پنل مدیریت</div>
+            </div>
+          </div>
+
+          <label>
+            رمز فعلی
+            <input name="current" class="ltr" type="password"
+              required autocomplete="current-password">
+          </label>
+
+          <label>
+            رمز جدید
+            <input name="next" class="ltr" type="password"
+              minlength="10" required autocomplete="new-password">
+            <span class="hint">حداقل ۱۰ کاراکتر</span>
+          </label>
+
+          <p class="error"></p>
+          <div class="form-actions">
+            <button class="btn" type="submit">تغییر رمز مدیر</button>
+          </div>
+        </form>
+
+      </div>
+
+      <div class="card card-pad settings-save-bar">
+        <p class="error" id="settings-error"></p>
+        <button class="btn primary" id="save-settings" type="button">ذخیره تنظیمات</button>
+      </div>`;
+
+    const forms = [
+      '#runtime-settings-form',
+      '#subscription-settings-form',
+      '#sync-settings-form',
+      '#xui-settings-form',
+      '#system-settings-form',
+    ];
+
+    const collect = () => {
+      const out = {};
+
+      for (const selector of forms) {
+        const form = $(selector);
+        if (!form) continue;
+
+        for (const input of $$('input[name]', form)) {
+          if (input.type === 'checkbox') {
+            out[input.name] = input.checked;
+          } else if (input.type === 'number') {
+            out[input.name] = Number(input.value);
+          } else {
+            out[input.name] = input.value.trim();
+          }
+        }
+      }
+
+      return out;
+    };
+
+    $('#save-settings').addEventListener('click', async () => {
+      const error = $('#settings-error');
+      error.textContent = '';
+
+      try {
+        await api('PUT', '/api/admin/settings', collect());
+        toast('تنظیمات با موفقیت ذخیره شد');
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    });
+
     $('#pw-form').addEventListener('submit', async (e) => {
-      e.preventDefault(); const f = e.target;
-      try { await api('POST', '/api/admin/password', { current_password: f.current.value, new_password: f.next.value }); toast('رمز تغییر کرد؛ دوباره وارد شوید'); showLogin(); }
-      catch (err) { f.querySelector('.error').textContent = err.message; }
+      e.preventDefault();
+      const f = e.target;
+
+      try {
+        await api('POST', '/api/admin/password', {
+          current_password: f.current.value,
+          new_password: f.next.value,
+        });
+
+        toast('رمز تغییر کرد؛ دوباره وارد شوید');
+        showLogin();
+      } catch (err) {
+        f.querySelector('.error').textContent = err.message;
+      }
     });
   };
-
   // Live refresh of usage (dashboard + users) while nothing is being edited.
   setInterval(() => {
     if (document.hidden || !$('#modal').classList.contains('hidden') || $('#app-view').classList.contains('hidden')) return;

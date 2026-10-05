@@ -357,3 +357,82 @@ input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--primary
   .search{width:100%}
   .content{padding:18px 14px 40px}
 }
+
+/* Settings */
+.settings-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+
+.settings-grid .card{
+  min-width:0;
+}
+
+.settings-grid .section-head{
+  margin-bottom:18px;
+}
+
+.settings-grid .section-head h3{
+  font-size:16px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+
+.toggle-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 0;
+  cursor:pointer;
+}
+
+.toggle-row input{
+  margin-top:3px;
+  flex:0 0 auto;
+}
+
+.toggle-row span{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.toggle-row small{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+
+.settings-save-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:16px;
+}
+
+.settings-save-bar .error{
+  margin:0;
+  flex:1;
+}
+
+@media (max-width:800px){
+  .settings-grid,
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .settings-save-bar{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .settings-save-bar .btn{
+    width:100%;
+  }
+}

@@ -70,6 +70,7 @@ function decryptSecret(blob) {
 // ---------- Login rate limiter (in-memory, per IP and per username) ----------
 class LoginLimiter {
   constructor(max, windowMs) { this.max = max; this.windowMs = windowMs; this.map = new Map(); }
+  configure(max, windowMs) { this.max = max; this.windowMs = windowMs; }
   _key(k) {
     const now = Date.now();
     let e = this.map.get(k);

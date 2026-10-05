@@ -4,6 +4,7 @@
 //  - users.xui_email: legacy manual mapping
 const { getDb } = require('./db');
 const { config } = require('./config');
+const settings = require('./settings');
 const { XuiClient } = require('./xui');
 const { decryptSecret } = require('./security');
 const { getUsage, subscriptionStatus, audit } = require('./services');
@@ -103,7 +104,7 @@ async function syncAll(log = console.log) {
         const seen = await syncProvisioned(x, s, log);
         result.clients += seen.length;
         const found = await syncLegacy(x, s, legacyUsers);
-        if (config.enforceOnXui) { await enforceProvisioned(x, seen, log); await enforceLegacy(x, s, found, log); }
+        if (settings.get('enforce_on_xui')) { await enforceProvisioned(x, seen, log); await enforceLegacy(x, s, found, log); }
         db.prepare('UPDATE servers SET last_sync_at=?, last_sync_error=NULL WHERE id=?').run(Date.now(), s.id);
         result.servers++;
       } catch (e) {
@@ -117,11 +118,38 @@ async function syncAll(log = console.log) {
 }
 
 function startCollector(log = console.log) {
-  if (!config.statsIntervalS) return null;
-  const t = setInterval(() => syncAll(log).catch((e) => log(`[stats] ${e.message}`)), config.statsIntervalS * 1000);
-  t.unref();
-  setTimeout(() => syncAll(log).catch(() => {}), 3000).unref();
-  return t;
+  let stopped = false;
+  let timer = null;
+
+  const schedule = (delayMs) => {
+    if (stopped) return;
+    timer = setTimeout(run, delayMs);
+    timer.unref();
+  };
+
+  const run = async () => {
+    if (stopped) return;
+
+    try {
+      if (settings.get('sync_enabled')) {
+        await syncAll(log);
+      }
+    } catch (e) {
+      log(`[stats] ${e.message}`);
+    }
+
+    const interval = settings.get('stats_interval_seconds');
+    schedule(Math.max(1000, interval * 1000));
+  };
+
+  schedule(3000);
+
+  return {
+    stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
 }
 
 module.exports = { syncAll, startCollector };

@@ -10,12 +10,14 @@ const prov = require('./provision');
 const subs = require('./subscriptions');
 const crypto = require('node:crypto');
 const sessions = require('./sessions');
+const settings = require('./settings');
 
-const limiter = new sec.LoginLimiter(config.loginMaxAttempts, config.loginWindowMin * 60000);
+const limiter = new sec.LoginLimiter(settings.get('login_max_attempts'), settings.get('login_window_minutes') * 60000);
 setInterval(() => limiter.sweep(), 60000).unref();
 
 const CONFIG_SYNC_SECONDS = 300;
 const ADMIN_COOKIE = 'admin_session';
+settings.ensureTable();
 
 // ------------------------------------------------------------------ auth
 function bearer(req) {
@@ -47,6 +49,10 @@ function requireAdmin(ctx) {
 }
 
 function loginGuard(ctx, kind, username) {
+  limiter.configure(
+    settings.get('login_max_attempts'),
+    settings.get('login_window_minutes') * 60000
+  );
   const keys = [`${kind}:ip:${ctx.ip}`, `${kind}:u:${String(username).toLowerCase()}`];
   const wait = limiter.check(keys);
   if (wait > 0) throw new HttpError(429, 'TOO_MANY_ATTEMPTS', `تلاش‌های ناموفق زیاد بود. ${Math.ceil(wait / 60)} دقیقه دیگر تلاش کنید`, { retry_after: wait });
@@ -169,7 +175,7 @@ r.post('/api/v1/auth/login', (ctx) => {
   if (user.status === 'blocked') throw new HttpError(403, 'BLOCKED', STATUS_MESSAGES.BLOCKED);
   // single device: atomically bind this login as the only active session (BEGIN IMMEDIATE + PK on user_id)
   const issued = sessions.claim(user.id,
-    (sid, tv) => sec.signToken({ sub: user.id, role: 'user', tv, sid }, config.userTokenTtlH),
+    (sid, tv) => sec.signToken({ sub: user.id, role: 'user', tv, sid }, settings.get('user_token_ttl_hours')),
     { ip: ctx.ip, userAgent: ctx.req.headers['user-agent'] });
   if (!issued) {
     audit(`user:${user.username}`, 'user.login_rejected_active_device', null, null, ctx.ip);
@@ -231,9 +237,9 @@ r.post('/api/admin/login', (ctx) => {
     throw new HttpError(401, 'INVALID_CREDENTIALS', 'نام کاربری یا رمز عبور اشتباه است');
   }
   limiter.reset(keys);
-  const { token, exp } = sec.signToken({ sub: admin.id, role: 'admin', tv: admin.token_version }, config.adminTokenTtlH);
+  const { token, exp } = sec.signToken({ sub: admin.id, role: 'admin', tv: admin.token_version }, settings.get('admin_token_ttl_hours'));
   audit(`admin:${admin.username}`, 'admin.login', null, null, ctx.ip);
-  ctx.setHeader('Set-Cookie', cookieHeader(token, config.adminTokenTtlH * 3600));
+  ctx.setHeader('Set-Cookie', cookieHeader(token, settings.get('admin_token_ttl_hours') * 3600));
   return { username: admin.username, expires_at: exp };
 });
 r.post('/api/admin/logout', requireAdmin, (ctx) => {
@@ -243,6 +249,44 @@ r.post('/api/admin/logout', requireAdmin, (ctx) => {
   return { ok: true };
 });
 r.get('/api/admin/me', requireAdmin, (ctx) => ({ username: ctx.admin.username }));
+r.get('/api/admin/settings', requireAdmin, () => ({
+  settings: settings.getAll(),
+}));
+
+r.put('/api/admin/settings', requireAdmin, (ctx) => {
+  const allowed = [
+    'user_token_ttl_hours',
+    'admin_token_ttl_hours',
+    'login_max_attempts',
+    'login_window_minutes',
+    'stats_interval_seconds',
+    'subscription_refresh_minutes',
+    'enforce_on_xui',
+    'xui_allow_insecure_tls',
+    'public_url',
+    'default_quota_gb',
+    'default_subscription_days',
+    'sync_enabled',
+  ];
+
+  const values = {};
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(ctx.body, key)) {
+      values[key] = ctx.body[key];
+    }
+  }
+
+  try {
+    const result = settings.update(values);
+    audit(`admin:${ctx.admin.username}`, 'admin.settings_updated', null, {
+      changed: result.changed,
+    }, ctx.ip);
+    return result;
+  } catch (e) {
+    throw new HttpError(400, 'VALIDATION', e.message);
+  }
+});
+
 r.post('/api/admin/password', requireAdmin, (ctx) => {
   const cur = v.str(ctx.body.current_password, 'رمز فعلی', { min: 1, max: 128 });
   const next = v.str(ctx.body.new_password, 'رمز جدید', { min: 10, max: 128 });
@@ -319,10 +363,24 @@ r.post('/api/admin/users', requireAdmin, async (ctx) => {
   const b = parseUserBody(ctx.body, false);
   if (getDb().prepare('SELECT 1 FROM users WHERE username=?').get(b.username)) throw new HttpError(409, 'DUPLICATE', 'این نام کاربری قبلاً ثبت شده است');
   const now = Date.now();
-  const expires = b.expires_at !== undefined ? b.expires_at : (b.days ? now + b.days * 86400000 : null);
+
+  const quotaGb = b.quota_gb !== undefined
+    ? b.quota_gb
+    : settings.get('default_quota_gb');
+
+  let expires;
+  if (b.expires_at !== undefined) {
+    expires = b.expires_at;
+  } else if (b.days !== undefined) {
+    expires = b.days ? now + b.days * 86400000 : null;
+  } else {
+    const defaultDays = settings.get('default_subscription_days');
+    expires = defaultDays ? now + defaultDays * 86400000 : null;
+  }
+
   const id = tx((db) => {
     const res = db.prepare(`INSERT INTO users(username,password_hash,status,quota_bytes,expires_at,xui_email,group_id,note,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(b.username, sec.hashPassword(b.password), b.status || 'active', gbToBytes(b.quota_gb || 0), expires, b.xui_email ?? null, b.group_id ?? null, b.note || '', now, now);
+      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(b.username, sec.hashPassword(b.password), b.status || 'active', gbToBytes(quotaGb), expires, b.xui_email ?? null, b.group_id ?? null, b.note || '', now, now);
     const uid = Number(res.lastInsertRowid);
     if (b.config_ids) userAssignConfigs(uid, b.config_ids);
     return uid;
@@ -394,8 +452,8 @@ r.post('/api/admin/users/:id/release-device', requireAdmin, (ctx) => {
 
 r.delete('/api/admin/users/:id', requireAdmin, async (ctx) => {
   const u = getUserOr404(+ctx.params.id);
-  const xui_errors = await prov.deprovisionUser(u.id);
   const cfgIds = prov.clientsOf(u.id).map((c) => c.config_id).filter(Boolean);
+  const xui_errors = await prov.deprovisionUser(u.id);
   tx((db) => {
     db.prepare('DELETE FROM users WHERE id=?').run(u.id);
     for (const cid of cfgIds) db.prepare('DELETE FROM configs WHERE id=?').run(cid); // per-user generated configs
