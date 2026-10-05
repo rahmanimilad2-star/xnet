@@ -28,7 +28,6 @@ object SubscriptionUsage {
     }
 
     fun volume(acc: Account): Volume = when {
-        !acc.usageKnown -> Volume.Unknown
         acc.unlimited || acc.quotaBytes <= 0 -> Volume.Unlimited(acc.usedBytes.coerceAtLeast(0))
         else -> Volume.Limited(
             usedBytes = acc.usedBytes.coerceAtLeast(0),

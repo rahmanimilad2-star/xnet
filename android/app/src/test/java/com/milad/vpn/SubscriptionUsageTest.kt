@@ -28,7 +28,7 @@ class SubscriptionUsageTest {
 
     @Test fun unlimitedAndUnknown() {
         assertEquals(Volume.Unlimited(3 * GB), SubscriptionUsage.volume(acc(0, 3 * GB, null, unlimited = true)))
-        assertEquals(Volume.Unknown, SubscriptionUsage.volume(acc(50 * GB, 0, 50 * GB, known = false)))
+        assertEquals(Volume.Limited(0, 50 * GB, 50 * GB), SubscriptionUsage.volume(acc(50 * GB, 0, 50 * GB, known = false)))
     }
 
     @Test fun daysLeftFromPanelExpiry() {
