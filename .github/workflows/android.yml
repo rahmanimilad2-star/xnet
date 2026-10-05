@@ -48,8 +48,19 @@ jobs:
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then gradle wrapper --gradle-version 8.14.3; fi
           chmod +x gradlew
 
-      - name: assembleDebug
-        run: ./gradlew --no-daemon assembleDebug -PvpnApiBaseUrl=https://core.xnetify.ir
+      - name: Decode release keystore
+        env:
+          VPN_KEYSTORE_B64: ${{ secrets.VPN_KEYSTORE }}
+        run: |
+          echo "$VPN_KEYSTORE_B64" | base64 --decode > xnet-release.keystore
+          chmod 600 xnet-release.keystore
+
+      - name: assembleRelease
+        env:
+          VPN_KEYSTORE: xnet-release.keystore
+          VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
+          VPN_KEY_ALIAS: ${{ secrets.VPN_KEY_ALIAS }}
+        run: ./gradlew --no-daemon assembleRelease -PvpnApiBaseUrl=https://core.xnetify.ir
 
       - name: Unit tests
         continue-on-error: true
@@ -58,6 +69,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
