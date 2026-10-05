@@ -64,7 +64,48 @@ data class VpnConfig(
     }
 }
 
-data class ConfigBundle(val configs: List<VpnConfig>, val version: String, val syncAfterSeconds: Int)
+data class SubscriptionUsage(
+    val id: Long,
+    val name: String,
+    val uploadBytes: Long?,
+    val downloadBytes: Long?,
+    val totalBytes: Long?,
+    val expireAt: Long?,
+    val updatedAt: Long?,
+) {
+    val usedBytes: Long?
+        get() {
+            val upload = uploadBytes ?: return null
+            val download = downloadBytes ?: return null
+            return upload + download
+        }
+
+    val remainingBytes: Long?
+        get() {
+            val total = totalBytes ?: return null
+            val used = usedBytes ?: return null
+            return (total - used).coerceAtLeast(0L)
+        }
+
+    companion object {
+        fun from(j: JSONObject) = SubscriptionUsage(
+            id = j.getLong("id"),
+            name = j.optString("name"),
+            uploadBytes = if (j.isNull("upload_bytes")) null else j.getLong("upload_bytes"),
+            downloadBytes = if (j.isNull("download_bytes")) null else j.getLong("download_bytes"),
+            totalBytes = if (j.isNull("total_bytes")) null else j.getLong("total_bytes"),
+            expireAt = if (j.isNull("expire_at")) null else j.getLong("expire_at"),
+            updatedAt = if (j.isNull("updated_at")) null else j.getLong("updated_at"),
+        )
+    }
+}
+
+data class ConfigBundle(
+    val configs: List<VpnConfig>,
+    val version: String,
+    val syncAfterSeconds: Int,
+    val subscriptionUsage: List<SubscriptionUsage> = emptyList(),
+)
 
 /** Server-side error with a machine readable [code] (e.g. QUOTA_EXCEEDED, NO_CONFIG, UNAUTHORIZED). */
 class ApiException(val httpStatus: Int, val code: String, override val message: String, val account: Account? = null) : Exception(message)

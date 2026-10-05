@@ -73,7 +73,22 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
         val j = call("GET", "/api/v1/configs")
         val arr = j.getJSONArray("configs")
         val list = (0 until arr.length()).map { VpnConfig.from(arr.getJSONObject(it)) }
-        return Account.from(j.getJSONObject("account")) to ConfigBundle(list, j.optString("version"), j.optInt("sync_after_seconds", 300))
+
+        val usageArr = j.optJSONArray("subscription_usage")
+        val subscriptionUsage = if (usageArr == null) {
+            emptyList()
+        } else {
+            (0 until usageArr.length()).map {
+                SubscriptionUsage.from(usageArr.getJSONObject(it))
+            }
+        }
+
+        return Account.from(j.getJSONObject("account")) to ConfigBundle(
+            configs = list,
+            version = j.optString("version"),
+            syncAfterSeconds = j.optInt("sync_after_seconds", 300),
+            subscriptionUsage = subscriptionUsage,
+        )
     }
 
     suspend fun event(type: String, configId: Long? = null, error: String? = null) {

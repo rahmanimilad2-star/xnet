@@ -25,6 +25,7 @@ data class UiState(
     val loginErrorCode: String? = null, // xnet-single-device-v1
     val account: Account? = null,
     val configs: List<VpnConfig> = Repository.session.loadConfigs()?.configs.orEmpty(),
+    val subscriptionUsage: List<com.milad.vpn.data.SubscriptionUsage> = emptyList(),
     val selectedConfigId: Long = Repository.session.selectedConfigId,
     /** message for the subscription/config problem (quota, expiry, no config…) */
     val blockMessage: String? = null,
@@ -85,7 +86,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             Repository.session.saveConfigs(bundle)
             Repository.publishAccount(acc)
             _ui.value = _ui.value.copy(
-                account = acc, configs = bundle.configs, blockMessage = null, blockCode = null, info = null,
+                account = acc,
+                configs = bundle.configs,
+                subscriptionUsage = bundle.subscriptionUsage,
+                blockMessage = null,
+                blockCode = null,
+                info = null,
                 // the service may have switched a removed manual location back to Auto
                 selectedConfigId = Repository.session.selectedConfigId,
             )
