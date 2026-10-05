@@ -49,10 +49,7 @@ jobs:
           chmod +x gradlew
 
       - name: assembleDebug
-        env:
-          # Optional: set a repository variable VPN_API_BASE_URL (Settings > Variables) to bake your backend URL
-          VPN_API_BASE_URL: ${{ vars.VPN_API_BASE_URL }}
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleDebug -PvpnApiBaseUrl=https://core.xnetify.ir
 
       - name: Unit tests
         continue-on-error: true
