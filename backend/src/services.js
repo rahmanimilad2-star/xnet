@@ -42,6 +42,32 @@ function usageKnown(user) {
   return !!getDb().prepare('SELECT 1 FROM user_clients WHERE user_id=? LIMIT 1').get(user.id);
 }
 
+/**
+ * Display-only Subscription-Userinfo for subscription-only users (usage_known = false).
+ * Present only when exactly one enabled subscription is assigned to exactly this user and a validated
+ * header was stored by POST /api/v1/subscriptions/refresh. It never feeds status, access, quota_bytes,
+ * used_bytes, remaining_bytes, expires_at or days_left: those stay governed by the panel.
+ */
+function upstreamUsage(user, known, now) {
+  if (known) return null;
+  const rows = require('./user-subscription-refresh').usageFor(user.id); // lazy: avoids a require cycle
+  if (rows.length !== 1) return null; // none, or several subscriptions that cannot be summed safely
+  const r = rows[0];
+  const used = r.upload_bytes + r.download_bytes;
+  const unlimited = r.total_bytes === 0;
+  return {
+    used_bytes: used,
+    upload_bytes: r.upload_bytes,
+    download_bytes: r.download_bytes,
+    total_bytes: r.total_bytes,
+    unlimited,
+    remaining_bytes: unlimited ? null : Math.max(0, r.total_bytes - used),
+    expire_at: r.expire_at,
+    days_left: r.expire_at ? Math.max(0, Math.ceil((r.expire_at - now) / 86400000)) : null,
+    updated_at: r.updated_at,
+  };
+}
+
 function accountView(user) {
   const usage = getUsage(user.id);
   const known = usageKnown(user);
@@ -66,6 +92,8 @@ function accountView(user) {
     rate_up_bps: usage.rate_up,
     rate_down_bps: usage.rate_down,
     last_connect_at: user.last_connect_at,
+    // additive, optional; null unless usage_known is false and validated upstream data exists
+    subscription_userinfo: upstreamUsage(user, known, now),
   };
 }
 

@@ -64,14 +64,15 @@ jobs:
           VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
           VPN_KEY_ALIAS: ${{ secrets.VPN_KEY_ALIAS }}
           VPN_KEY_PASSWORD: ${{ secrets.VPN_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon assembleRelease -PvpnApiBaseUrl=https://core.xnetify.ir
+        run: ./gradlew --no-daemon assembleRelease
 
       - name: Verify release API base URL
         run: |
+          expected=$(grep -E '^vpnApiBaseUrl=' gradle.properties | cut -d= -f2- | tr -d '[:space:]')
           f=$(find app/build/generated -name BuildConfig.java -path '*release*' | head -1)
           grep 'API_BASE_URL' "$f"
-          grep -q 'API_BASE_URL = "https://core.xnetify.ir"' "$f" || {
-            echo "ERROR: Release API_BASE_URL is not https://core.xnetify.ir"
+          grep -qF "API_BASE_URL = \"$expected\"" "$f" || {
+            echo "ERROR: Release API_BASE_URL does not match gradle.properties ($expected)"
             exit 1
           }
 

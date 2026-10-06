@@ -459,7 +459,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                             }
                         }
                     }
-                    ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
+                    ui.account?.let { SubscriptionStrip(it, english, onOpenAccount) }
                 }
             }
         }
@@ -686,8 +686,7 @@ private fun expiryLine(acc: Account, english: Boolean): String {
     val d = acc.daysLeft
     val left = when {
         d == null -> ""
-        acc.expiresAt < System.currentTimeMillis() -> if (english) " · expired" else " · منقضی شده"
-        d <= 0 -> if (english) " · ends today" else " · امروز تمام می‌شود"
+        acc.status == "EXPIRED" || d <= 0 -> if (english) " · expired" else " · منقضی شده"
         else -> if (english) " · $d days left" else " · ${Format.num(d)} روز مانده"
     }
     return "${if (english) "Expires" else "انقضا"} ${Format.date(acc.expiresAt)}$left"
@@ -839,82 +838,41 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
 @Composable
 fun SubscriptionStrip(
     acc: Account,
-    usages: List<com.milad.vpn.data.SubscriptionUsage>,
     english: Boolean,
     onOpen: () -> Unit,
 ) {
     val context = LocalContext.current
-    val usage = usages.firstOrNull()
+    // Backend values only (Account from /api/v1/configs); see SubscriptionUsage.
+    val volume = SubscriptionUsage.volume(acc)
+    val time = SubscriptionUsage.time(acc)
 
-    val usedBytes = usage?.usedBytes ?: 0L
-    val totalBytes = usage?.totalBytes
-    val remainingBytes = usage?.remainingBytes
+    val hasLimitedVolume = volume is SubscriptionUsage.Volume.Limited
+    val usedFraction = (volume as? SubscriptionUsage.Volume.Limited)?.usedFraction ?: 0f
 
-    val hasLimitedVolume =
-        totalBytes != null &&
-        totalBytes > 0L &&
-        remainingBytes != null
-
-    val isUnlimited = totalBytes == 0L
-
-    val usedFraction = if (hasLimitedVolume) {
-        (usedBytes.toDouble() / totalBytes!!.toDouble())
-            .coerceIn(0.0, 1.0)
-            .toFloat()
-    } else {
-        0f
+    val volumeTitle = when (volume) {
+        SubscriptionUsage.Volume.Unknown -> if (english) "Subscription usage" else "مصرف اشتراک"
+        is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited" else "نامحدود"
+        is SubscriptionUsage.Volume.Limited -> Format.bytes(volume.remainingBytes)
     }
 
-    val volumeTitle = when {
-        usage == null ->
-            if (english) "Subscription usage" else "مصرف اشتراک"
-
-        isUnlimited ->
-            if (english) "Unlimited" else "نامحدود"
-
-        else ->
-            Format.bytes(remainingBytes ?: 0L)
+    val volumeSubtitle = when (volume) {
+        SubscriptionUsage.Volume.Unknown -> if (english) "Usage not available" else "حجم نامشخص"
+        is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited volume" else "حجم نامحدود"
+        is SubscriptionUsage.Volume.Limited -> if (english) "of ${Format.bytes(volume.quotaBytes)}" else "از ${Format.bytes(volume.quotaBytes)}"
     }
 
-    val volumeSubtitle = when {
-        usage == null ->
-            if (english) "Usage not available" else "حجم نامشخص"
-
-        isUnlimited ->
-            if (english) "Unlimited volume" else "حجم نامحدود"
-
-        hasLimitedVolume ->
-            if (english) "of ${Format.bytes(totalBytes!!)}" else "از ${Format.bytes(totalBytes!!)}"
-
-        else ->
-            if (english) "Usage not available" else "حجم نامشخص"
+    val daysText = when (time) {
+        SubscriptionUsage.Time.NoLimit -> null
+        SubscriptionUsage.Time.Expired -> if (english) "Expired" else "منقضی شده"
+        is SubscriptionUsage.Time.DaysLeft ->
+            if (english) "⏳ ${time.days} days left"
+            else "⏳ ${Format.num(time.days)} روز باقی‌مانده"
     }
 
-    val expireAt = usage?.expireAt ?: 0L
-    val nowSeconds = System.currentTimeMillis() / 1000L
-
-    val daysLeft = if (expireAt > 0L) {
-        kotlin.math.ceil(
-            (expireAt - nowSeconds).toDouble() / 86400.0
-        ).toInt()
-    } else {
-        null
-    }
-
-    val hasValidExpiry = daysLeft != null && daysLeft > 0
-
-    val daysText = when {
-        daysLeft == null -> null
-        daysLeft <= 0 ->
-            if (english) "Expired" else "منقضی شده"
-        else ->
-            if (english) "⏳ $daysLeft days left"
-            else "⏳ ${Format.num(daysLeft)} روز باقی‌مانده"
-    }
-
-    val daysColor = when {
-        daysLeft != null && daysLeft <= 3 -> Bad
-        else -> muted()
+    val daysColor = when (time) {
+        SubscriptionUsage.Time.Expired -> Bad
+        is SubscriptionUsage.Time.DaysLeft -> if (time.days <= 3) Bad else muted()
+        SubscriptionUsage.Time.NoLimit -> muted()
     }
 
     Card(
@@ -1018,11 +976,11 @@ fun SubscriptionStrip(
                 }
             }
 
-            if (hasValidExpiry || (daysLeft != null && daysLeft <= 0)) {
+            if (daysText != null) {
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    daysText ?: "",
+                    daysText,
                     fontSize = 12.sp,
                     color = daysColor,
                     maxLines = 1,

@@ -17,6 +17,8 @@ data class Account(
     val usageSyncedAt: Long?,
     /** false when traffic isn't measured (manual / subscription configs) -> UI shows «حجم نامشخص», connect stays enabled */
     val usageKnown: Boolean = true,
+    /** Backend-computed, display-only upstream Subscription-Userinfo; only sent when usage_known is false. */
+    val subscriptionUserinfo: SubscriptionUserinfo? = null,
 ) {
     val isActive get() = status == "ACTIVE"
 
@@ -35,6 +37,30 @@ data class Account(
             daysLeft = if (j.isNull("days_left")) null else j.getInt("days_left"),
             usageSyncedAt = if (j.isNull("usage_synced_at")) null else j.getLong("usage_synced_at"),
             usageKnown = j.optBoolean("usage_known", true),
+            subscriptionUserinfo = j.optJSONObject("subscription_userinfo")?.let(SubscriptionUserinfo::from),
+        )
+    }
+}
+
+/** account.subscription_userinfo: values computed by the backend from the stored Subscription-Userinfo header. */
+data class SubscriptionUserinfo(
+    val usedBytes: Long,
+    val totalBytes: Long,
+    val unlimited: Boolean,
+    val remainingBytes: Long?,
+    val expireAt: Long?,
+    val daysLeft: Int?,
+    val updatedAt: Long?,
+) {
+    companion object {
+        fun from(j: JSONObject) = SubscriptionUserinfo(
+            usedBytes = j.optLong("used_bytes"),
+            totalBytes = j.optLong("total_bytes"),
+            unlimited = j.optBoolean("unlimited"),
+            remainingBytes = if (j.isNull("remaining_bytes")) null else j.getLong("remaining_bytes"),
+            expireAt = if (j.isNull("expire_at")) null else j.getLong("expire_at"),
+            daysLeft = if (j.isNull("days_left")) null else j.getInt("days_left"),
+            updatedAt = if (j.isNull("updated_at")) null else j.getLong("updated_at"),
         )
     }
 }

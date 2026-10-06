@@ -4,9 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Backend URL: -PvpnApiBaseUrl=... or env VPN_API_BASE_URL (CI), otherwise gradle.properties
-val apiBase: String = System.getenv("VPN_API_BASE_URL")?.takeIf { it.isNotBlank() }
-    ?: (project.findProperty("vpnApiBaseUrl") as String?) ?: "https://core.xnetify.ir"
+// Backend URL: single source of truth = `vpnApiBaseUrl` in android/gradle.properties.
+// Moving the backend (e.g. to another host) means changing only that one line.
+val apiBase: String = (project.findProperty("vpnApiBaseUrl") as String?)?.trim()?.trimEnd('/')
+    .takeIf { !it.isNullOrBlank() }
+    ?: throw GradleException("vpnApiBaseUrl is missing in android/gradle.properties")
+require(apiBase.startsWith("https://")) { "vpnApiBaseUrl must be HTTPS: $apiBase" }
 
 android {
     namespace = "com.milad.vpn"
@@ -17,9 +20,9 @@ android {
         applicationId = "com.milad.vpn"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.2.4"
-        buildConfigField("String", "API_BASE_URL", "\"${apiBase.trimEnd('/')}\"")
+        versionCode = 8
+        versionName = "1.2.5"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 

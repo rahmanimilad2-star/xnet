@@ -1,22 +1,22 @@
 package com.milad.vpn.ui
 
 import com.milad.vpn.data.Account
-import kotlin.math.ceil
 
 /**
- * Pure view-model for the Home "subscription usage" card.
- * Everything comes from the existing [Account] that the current refresh (/api/v1/configs, /api/v1/account)
- * already delivers: used_bytes, quota_bytes, remaining_bytes, unlimited, usage_known, expires_at, days_left.
- * Nothing is fetched or summed per config here.
+ * Display mapping for the Home "subscription usage" card.
+ * The backend is the only authority: used_bytes, quota_bytes, remaining_bytes, unlimited, usage_known,
+ * expires_at, days_left and status come from /api/v1/configs (/api/v1/account) and are shown as-is.
+ * For subscription-only users (usage_known = false) the backend may add account.subscription_userinfo
+ * (display only, never status). No clock, no subtraction, no per-config sums here.
  */
 object SubscriptionUsage {
-    private const val DAY_MS = 86_400_000L
 
     sealed interface Volume {
-        /** Backend does not measure this user's traffic (usage_known = false). */
+        /** Backend does not measure this user's traffic (usage_known = false) or sent no remaining value. */
         object Unknown : Volume
         data class Unlimited(val usedBytes: Long) : Volume
         data class Limited(val usedBytes: Long, val quotaBytes: Long, val remainingBytes: Long) : Volume {
+            /** Only for the progress bar width. */
             val usedFraction: Float get() = if (quotaBytes <= 0) 0f else (usedBytes.toDouble() / quotaBytes).coerceIn(0.0, 1.0).toFloat()
         }
     }
@@ -28,19 +28,32 @@ object SubscriptionUsage {
     }
 
     fun volume(acc: Account): Volume = when {
-        acc.unlimited || acc.quotaBytes <= 0 -> Volume.Unlimited(acc.usedBytes.coerceAtLeast(0))
-        else -> Volume.Limited(
-            usedBytes = acc.usedBytes.coerceAtLeast(0),
-            quotaBytes = acc.quotaBytes,
-            // the backend's own remaining_bytes; only if it is missing derive it from the same two fields
-            remainingBytes = (acc.remainingBytes ?: (acc.quotaBytes - acc.usedBytes)).coerceAtLeast(0),
-        )
+        // Panel doesn't measure this user: show the backend's upstream Subscription-Userinfo values if it sent them.
+        !acc.usageKnown -> acc.subscriptionUserinfo?.let { u ->
+            if (u.unlimited) Volume.Unlimited(u.usedBytes)
+            else u.remainingBytes?.let { Volume.Limited(u.usedBytes, u.totalBytes, it) }
+        } ?: Volume.Unknown
+        acc.unlimited -> Volume.Unlimited(acc.usedBytes)
+        else -> acc.remainingBytes?.let { Volume.Limited(acc.usedBytes, acc.quotaBytes, it) } ?: Volume.Unknown
     }
 
-    /** Same rule as the backend's days_left: ceil((expires_at - now) / 1 day), based on the panel's expires_at. */
-    fun time(acc: Account, now: Long = System.currentTimeMillis()): Time {
-        val exp = acc.expiresAt ?: return Time.NoLimit
-        if (exp <= now) return Time.Expired
-        return Time.DaysLeft(ceil((exp - now).toDouble() / DAY_MS).toInt())
+    /** From the backend's expires_at / days_left / status. days_left is max(0, ceil(...)) on the server, so 0 = expired. */
+    fun time(acc: Account): Time {
+        if (acc.expiresAt == null) {
+            // No panel expiry: an unmeasured (subscription-only) user may still have the backend's upstream days_left.
+            val u = acc.subscriptionUserinfo ?: return Time.NoLimit
+            val d = u.daysLeft
+            return when {
+                acc.usageKnown || u.expireAt == null || d == null -> Time.NoLimit
+                d == 0 -> Time.Expired
+                else -> Time.DaysLeft(d)
+            }
+        }
+        val d = acc.daysLeft
+        return when {
+            acc.status == "EXPIRED" || d == 0 -> Time.Expired
+            d == null -> Time.NoLimit
+            else -> Time.DaysLeft(d)
+        }
     }
 }
