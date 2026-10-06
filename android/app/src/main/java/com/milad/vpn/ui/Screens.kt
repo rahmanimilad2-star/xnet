@@ -391,47 +391,71 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                     .widthIn(max = 560.dp)
                     .fillMaxWidth()
                     .heightIn(min = viewport)
-                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
-                                    Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                                    Modifier.size(30.dp).clip(RoundedCornerShape(10.dp))
                                         .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
                                     contentAlignment = Alignment.Center,
-                                ) { Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
-                                Spacer(Modifier.width(10.dp))
-                                Text(APP_TITLE, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                                ) { Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(17.dp)) }
+                                Spacer(Modifier.width(9.dp))
+                                Text(APP_TITLE, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp)
                             }
-                            ui.account?.let { Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 13.sp) }
+                            ui.account?.let { Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                         StatusPill(look.label, color, pulsing = vpn.phase == Phase.CONNECTING || vpn.phase == Phase.RECONNECTING)
                     }
                     ui.blockMessage?.let { Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
                 }
 
-                Column(Modifier.padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ConnectButton(vpn.phase, look, onToggle)
-                    Spacer(Modifier.height(18.dp))
-                    Text(look.label, color = color, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(hint, color = muted(), fontSize = 13.sp, textAlign = TextAlign.Center)
+                val buttonSize = when {
+
+                    viewport < 620.dp -> 190.dp
+
+                    viewport < 720.dp -> 210.dp
+
+                    else -> 230.dp
+
+                }
+
+                Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+
+                    ConnectButton(vpn.phase, look, onToggle, size = buttonSize)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(look.label, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(hint, color = muted(), fontSize = 12.5.sp, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 17.sp)
+
                 }
 
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ServerCard(flagOf(country), serverName, serverSub, color, english, onOpenServers)
                     AnimatedVisibility(visible = vpn.phase == Phase.CONNECTED, enter = fadeIn(), exit = fadeOut()) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            var tick by remember { mutableIntStateOf(0) }
-                            LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
-                            key(tick) {
-                                StatCard(if (english) "Session" else "مدت اتصال", Format.duration(vpn.connectedSince), Icons.Filled.Timer, BrandDeep, Modifier.weight(1f))
+                        Surface(
+                            shape = HomeCardShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                var tick by remember { mutableIntStateOf(0) }
+                                LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
+                                key(tick) {
+                                    StatCard(if (english) "Session" else "مدت اتصال", Format.duration(vpn.connectedSince), Icons.Filled.Timer, BrandDeep, Modifier.weight(1f))
+                                }
+                                VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                                StatCard(if (english) "Ping" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Icons.Filled.Speed, Warn, Modifier.weight(1f))
                             }
-                            StatCard(if (english) "Ping" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Icons.Filled.Speed, Warn, Modifier.weight(1f))
                         }
                     }
                     ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
@@ -446,19 +470,19 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
 private fun ServerCard(flag: String, title: String, sub: String, accent: Color, english: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
     Surface(
-        shape = CardShape,
+        shape = HomeCardShape,
         color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
-        modifier = Modifier.fillMaxWidth().clip(CardShape).clickable { vibrate(context); onClick() },
+        modifier = Modifier.fillMaxWidth().clip(HomeCardShape).clickable { vibrate(context); onClick() },
     ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
-            ) { Text(flag, fontSize = 22.sp) }
-            Spacer(Modifier.width(12.dp))
+            ) { Text(flag, fontSize = 19.sp) }
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(if (english) "Server" else "سرور", fontSize = 12.sp, color = muted())
+                Text(if (english) "Server" else "سرور", fontSize = 11.sp, color = muted(), lineHeight = 14.sp)
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub.isNotBlank()) Text(sub, fontSize = 12.sp, color = muted(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -561,7 +585,7 @@ private fun StatusPill(text: String, color: Color, pulsing: Boolean) {
 }
 
 @Composable
-private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
+private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, size: Dp = 250.dp) {
     val context = LocalContext.current
     val c1 by animateColorAsState(look.color, tween(500), label = "c1")
     val c2 by animateColorAsState(look.deep, tween(500), label = "c2")
@@ -573,7 +597,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, tween(120, easing = FastOutSlowInEasing), label = "press")
     LaunchedEffect(pressed) { if (pressed) { delay(140); pressed = false } }
 
-    Box(Modifier.size(250.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         // ambient rings: expanding while connected/connecting
         Canvas(Modifier.fillMaxSize()) {
             val r0 = size.minDimension / 2f * 0.62f
@@ -597,7 +621,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
         }
         Box(
             Modifier
-                .size(156.dp)
+                .size(size * 0.62f)
                 .scale(scale)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(c1, c2)))
@@ -612,7 +636,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
             Icon(
                 Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
-                tint = Color.White, modifier = Modifier.size(68.dp),
+                tint = Color.White, modifier = Modifier.size(size * 0.26f),
             )
         }
     }
@@ -620,16 +644,17 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit) {
 
 @Composable
 private fun StatCard(title: String, value: String, icon: ImageVector, tint: Color, modifier: Modifier) {
-    Card(modifier, shape = CardShape, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-            }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(title, fontSize = 12.sp, color = muted())
-                Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
-            }
+    Row(modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(tint.copy(alpha = 0.13f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp))
+        }
+        Spacer(Modifier.width(9.dp))
+        Column {
+            Text(title, fontSize = 11.sp, color = muted(), lineHeight = 14.sp, maxLines = 1)
+            Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, lineHeight = 19.sp)
         }
     }
 }
