@@ -585,7 +585,7 @@ private fun StatusPill(text: String, color: Color, pulsing: Boolean) {
 }
 
 @Composable
-private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, size: Dp = 250.dp) {
+private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, buttonSize: Dp = 250.dp) {
     val context = LocalContext.current
     val c1 by animateColorAsState(look.color, tween(500), label = "c1")
     val c2 by animateColorAsState(look.deep, tween(500), label = "c2")
@@ -597,7 +597,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, si
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, tween(120, easing = FastOutSlowInEasing), label = "press")
     LaunchedEffect(pressed) { if (pressed) { delay(140); pressed = false } }
 
-    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(buttonSize), contentAlignment = Alignment.Center) {
         // ambient rings: expanding while connected/connecting
         Canvas(Modifier.fillMaxSize()) {
             val r0 = size.minDimension / 2f * 0.62f
@@ -621,7 +621,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, si
         }
         Box(
             Modifier
-                .size((size.value * 0.62f).dp)
+                .size((buttonSize.value * 0.62f).dp)
                 .scale(scale)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(c1, c2)))
@@ -636,7 +636,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, si
             Icon(
                 Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
-                tint = Color.White, modifier = Modifier.size((size.value * 0.26f).dp),
+                tint = Color.White, modifier = Modifier.size((buttonSize.value * 0.26f).dp),
             )
         }
     }
