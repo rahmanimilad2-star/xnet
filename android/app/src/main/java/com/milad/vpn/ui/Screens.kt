@@ -86,6 +86,7 @@ private const val SUPPORT_TELEGRAM = "@rahmani208"
 private const val APP_TITLE = "Xnet"
 
 private val CardShape = RoundedCornerShape(20.dp)
+private val HomeCardShape = RoundedCornerShape(16.dp)
 
 // ---------------------------------------------------------------------------------- haptics
 private var lastVibrationAt = 0L
@@ -426,7 +427,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
 
                 Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
 
-                    ConnectButton(vpn.phase, look, onToggle, size = buttonSize)
+                    ConnectButton(vpn.phase, look, onToggle, buttonSize = buttonSize)
 
                     Spacer(Modifier.height(8.dp))
 
