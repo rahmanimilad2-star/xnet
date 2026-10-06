@@ -68,6 +68,9 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
     } catch (e: ApiException) { e.code != "NETWORK" }
 
     suspend fun account(): Account = Account.from(call("GET", "/api/v1/account").getJSONObject("account"))
+    /** Refresh the authenticated user's private subscription on our backend, then read configs(). */
+    suspend fun refreshSubscription() { call("POST", "/api/v1/subscriptions/refresh") }
+
 
     suspend fun configs(): Pair<Account, ConfigBundle> {
         val j = call("GET", "/api/v1/configs")

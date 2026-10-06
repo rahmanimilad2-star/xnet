@@ -13,7 +13,7 @@ const settings = require('./settings');
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-function fetchText(urlStr, redirects = 3) {
+function fetchText(urlStr, redirects = 3, withHeaders = false) {
   return new Promise((resolve, reject) => {
     let u;
     try { u = new URL(urlStr); } catch { return reject(new Error('آدرس Subscription نامعتبر است')); }
@@ -22,12 +22,17 @@ function fetchText(urlStr, redirects = 3) {
     const req = lib.get(u, { timeout: 15000, headers: { 'User-Agent': 'v2rayNG/1.8.0', Accept: '*/*' }, rejectUnauthorized: !settings.get('xui_allow_insecure_tls') }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
-        return resolve(fetchText(new URL(res.headers.location, u).toString(), redirects - 1));
+        return resolve(fetchText(new URL(res.headers.location, u).toString(), redirects - 1, withHeaders));
       }
       if (res.statusCode !== 200) { res.resume(); return reject(new Error(`HTTP ${res.statusCode}`)); }
       const chunks = []; let size = 0;
       res.on('data', (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error('پاسخ بیش از حد بزرگ است')); return; } chunks.push(c); });
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      res.on('error', reject);
+      res.on('aborted', () => reject(new Error('پاسخ Subscription ناقص است')));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        resolve(withHeaders ? { body, userinfo: res.headers['subscription-userinfo'] } : body);
+      });
     });
     req.on('timeout', () => req.destroy(new Error('timeout')));
     req.on('error', reject);

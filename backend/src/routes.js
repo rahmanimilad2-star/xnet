@@ -8,6 +8,7 @@ const { GB, getUsage, subscriptionStatus, accountView, allowedConfigs, audit, ST
 const stats = require('./stats');
 const prov = require('./provision');
 const subs = require('./subscriptions');
+const userSubs = require('./user-subscription-refresh');
 const crypto = require('node:crypto');
 const sessions = require('./sessions');
 const settings = require('./settings');
@@ -198,6 +199,12 @@ r.post('/api/v1/auth/logout', (ctx) => {
 });
 
 r.get('/api/v1/account', requireUser, (ctx) => ({ account: accountView(ctx.user) }));
+// No user/subscription id or URL from the client; ownership is resolved server-side.
+r.post('/api/v1/subscriptions/refresh', requireUser, async (ctx) => {
+  await userSubs.refreshUser(ctx.user.id, () => requireUser(ctx));
+  return { ok: true };
+});
+
 
 r.get('/api/v1/usage', requireUser, (ctx) => {
   const a = accountView(ctx.user);
@@ -213,7 +220,7 @@ r.get('/api/v1/configs', requireUser, (ctx) => {
   });
   if (!list.length) throw new HttpError(404, 'NO_CONFIG', STATUS_MESSAGES.NO_CONFIG, { account });
   const version = list.map((c) => `${c.id}:${c.updated_at}`).join(',');
-  return { account, configs: list, version: require('node:crypto').createHash('sha1').update(version).digest('hex'), sync_after_seconds: CONFIG_SYNC_SECONDS };
+  return { account, configs: list, version: require('node:crypto').createHash('sha1').update(version).digest('hex'), sync_after_seconds: CONFIG_SYNC_SECONDS, subscription_usage: userSubs.usageFor(ctx.user.id) };
 });
 
 r.post('/api/v1/events', requireUser, (ctx) => {

@@ -328,7 +328,7 @@ fun MainScaffold(
                     acc = ui.account, english = english, darkMode = darkMode,
                     password = remember(ui.account?.username) { com.milad.vpn.data.Repository.session.password },
                     onLanguageChange = onLanguageChange, onDarkModeChange = onDarkModeChange,
-                    onRefresh = vm::refreshNow, onLogout = vm::logout,
+                    onRefresh = vm::refreshAccountNow, onLogout = vm::logout,
                 )
             }
         }
@@ -818,80 +818,94 @@ fun SubscriptionStrip(
     onOpen: () -> Unit,
 ) {
     val context = LocalContext.current
-
     val usage = usages.firstOrNull()
 
-    val usedBytes = usage?.usedBytes
+    val usedBytes = usage?.usedBytes ?: 0L
     val totalBytes = usage?.totalBytes
     val remainingBytes = usage?.remainingBytes
 
-    val hasLimitedVolume = totalBytes != null && totalBytes > 0L && usedBytes != null
+    val hasLimitedVolume =
+        totalBytes != null &&
+        totalBytes > 0L &&
+        remainingBytes != null
+
     val isUnlimited = totalBytes == 0L
+
     val usedFraction = if (hasLimitedVolume) {
-        (usedBytes!!.toDouble() / totalBytes!!.toDouble()).coerceIn(0.0, 1.0).toFloat()
+        (usedBytes.toDouble() / totalBytes!!.toDouble())
+            .coerceIn(0.0, 1.0)
+            .toFloat()
     } else {
         0f
     }
 
-    val volumeText = when {
+    val volumeTitle = when {
+        usage == null ->
+            if (english) "Subscription usage" else "مصرف اشتراک"
+
+        isUnlimited ->
+            if (english) "Unlimited" else "نامحدود"
+
+        else ->
+            Format.bytes(remainingBytes ?: 0L)
+    }
+
+    val volumeSubtitle = when {
         usage == null ->
             if (english) "Usage not available" else "حجم نامشخص"
 
         isUnlimited ->
-            if (english) "${Format.bytes(usedBytes ?: 0L)} used · Unlimited"
-            else "${Format.bytes(usedBytes ?: 0L)} مصرف شده · نامحدود"
+            if (english) "Unlimited volume" else "حجم نامحدود"
 
         hasLimitedVolume ->
-            if (english) "${Format.bytes(remainingBytes ?: 0L)} left of ${Format.bytes(totalBytes!!)}"
-            else "${Format.bytes(remainingBytes ?: 0L)} باقی‌مانده از ${Format.bytes(totalBytes!!)}"
+            if (english) "of ${Format.bytes(totalBytes!!)}" else "از ${Format.bytes(totalBytes!!)}"
 
         else ->
             if (english) "Usage not available" else "حجم نامشخص"
     }
 
-    val usedText = if (hasLimitedVolume) {
-        if (english) "${Format.bytes(usedBytes ?: 0L)} used"
-        else "${Format.bytes(usedBytes ?: 0L)} مصرف شده"
-    } else {
-        null
-    }
-
     val expireAt = usage?.expireAt ?: 0L
     val nowSeconds = System.currentTimeMillis() / 1000L
+
     val daysLeft = if (expireAt > 0L) {
-        kotlin.math.ceil((expireAt - nowSeconds).toDouble() / 86400.0).toInt()
+        kotlin.math.ceil(
+            (expireAt - nowSeconds).toDouble() / 86400.0
+        ).toInt()
     } else {
         null
     }
 
-    val timeText = when {
-        usage == null ->
-            if (english) "Time not available" else "زمان نامشخص"
+    val hasValidExpiry = daysLeft != null && daysLeft > 0
 
-        expireAt <= 0L ->
-            if (english) "No time limit" else "بدون تاریخ انقضا"
-
-        daysLeft != null && daysLeft <= 0 ->
+    val daysText = when {
+        daysLeft == null -> null
+        daysLeft <= 0 ->
             if (english) "Expired" else "منقضی شده"
-
         else ->
             if (english) "⏳ $daysLeft days left"
-            else "⏳ ${Format.num(daysLeft ?: 0)} روز باقی‌مانده"
+            else "⏳ ${Format.num(daysLeft)} روز باقی‌مانده"
     }
 
-    val timeColor = when {
-        daysLeft != null && daysLeft <= 0 -> Bad
+    val daysColor = when {
         daysLeft != null && daysLeft <= 3 -> Bad
         else -> muted()
     }
 
     Card(
-        Modifier.fillMaxWidth().clip(CardShape).clickable { vibrate(context); onOpen() },
+        Modifier
+            .fillMaxWidth()
+            .clip(CardShape)
+            .clickable {
+                vibrate(context)
+                onOpen()
+            },
         shape = CardShape,
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -901,7 +915,11 @@ fun SubscriptionStrip(
                     Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Brand, BrandDeep)
+                            )
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -916,27 +934,39 @@ fun SubscriptionStrip(
 
                 Column(Modifier.weight(1f)) {
                     Text(
-                        if (english) "📊 Subscription usage" else "📊 مصرف اشتراک",
+                        if (english) "Subscription usage" else "مصرف اشتراک",
                         color = muted(),
                         maxLines = 1,
                     )
+
                     Text(
-                        volumeText,
+                        volumeTitle,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 19.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    Text(
+                        volumeSubtitle,
+                        fontSize = 11.sp,
+                        color = muted(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
 
                 Spacer(Modifier.width(8.dp))
+
                 StatusChip(acc.status, english)
 
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     null,
                     tint = muted(),
-                    modifier = Modifier.padding(start = 4.dp).size(20.dp),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .size(20.dp),
                 )
             }
 
@@ -946,7 +976,7 @@ fun SubscriptionStrip(
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
+                        .height(5.dp)
                         .clip(RoundedCornerShape(3.dp))
                         .background(muted().copy(alpha = 0.18f))
                 ) {
@@ -955,33 +985,22 @@ fun SubscriptionStrip(
                             .fillMaxWidth(usedFraction)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (usedFraction >= 0.9f) Bad else Brand),
-                        )
-                    }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    timeText,
-                    fontSize = 12.sp,
-                    color = timeColor,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f),
-                )
-
-                usedText?.let {
-                    Text(
-                        it,
-                        fontSize = 12.sp,
-                        color = muted(),
-                        maxLines = 1,
+                            .background(
+                                if (usedFraction >= 0.9f) Bad else Brand
+                            ),
                     )
                 }
+            }
+
+            if (hasValidExpiry || (daysLeft != null && daysLeft <= 0)) {
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    daysText ?: "",
+                    fontSize = 12.sp,
+                    color = daysColor,
+                    maxLines = 1,
+                )
             }
         }
     }

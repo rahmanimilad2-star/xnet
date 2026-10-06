@@ -190,6 +190,17 @@ function migrate(d) {
     )
   `);
   d.prepare('UPDATE schema_version SET version = 6 WHERE version < 6').run();
+  // Private subscription traffic headers, separate from XUI/account traffic (no double counting).
+  d.exec(`CREATE TABLE IF NOT EXISTS subscription_userinfo (
+    subscription_id INTEGER PRIMARY KEY REFERENCES subscriptions(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    upload_bytes INTEGER NOT NULL,
+    download_bytes INTEGER NOT NULL,
+    total_bytes INTEGER NOT NULL,
+    expire_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  d.prepare('UPDATE schema_version SET version = 7 WHERE version < 7').run();
 }
 
 let db;

@@ -41,6 +41,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val ui: StateFlow<UiState> = _ui
     val vpn = VpnState.status
     private var syncJob: Job? = null
+    private var manualRefreshJob: Job? = null
 
     init {
         if (Repository.isLoggedIn) startSync() else viewModelScope.launch { flushPendingRelease() }
@@ -78,6 +79,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshNow() { viewModelScope.launch { refresh() } }
+
+    /** Only the Account button triggers upstream subscription HTTP; periodic reads remain unchanged. */
+    fun refreshAccountNow() {
+        if (manualRefreshJob?.isActive == true) return
+        manualRefreshJob = viewModelScope.launch {
+            try {
+                Repository.api.refreshSubscription()
+                refresh()
+            } catch (e: ApiException) {
+                if (e.code == "UNAUTHORIZED") logout(releaseOnServer = false)
+                else _ui.value = _ui.value.copy(info = e.message)
+            }
+        }
+    }
 
     private suspend fun refresh(): Int {
         try {
@@ -141,6 +156,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun logout(releaseOnServer: Boolean = true) {
         val token = if (releaseOnServer) Repository.session.token else null
         AppVpnService.stop(getApplication())
+        manualRefreshJob?.cancel()
         syncJob?.cancel()
         Repository.logout()
         _ui.value = UiState(loggedIn = false, configs = emptyList())
