@@ -621,7 +621,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, si
         }
         Box(
             Modifier
-                .size(size * 0.62f)
+                .size((size.value * 0.62f).dp)
                 .scale(scale)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(c1, c2)))
@@ -636,7 +636,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, si
             Icon(
                 Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
-                tint = Color.White, modifier = Modifier.size(size * 0.26f),
+                tint = Color.White, modifier = Modifier.size((size.value * 0.26f).dp),
             )
         }
     }
