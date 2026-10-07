@@ -875,10 +875,10 @@ fun SubscriptionStrip(
         SubscriptionUsage.Volume.Unknown
     }
 
-    val time = when {
-        sub?.expireAt == null -> SubscriptionUsage.Time.NoLimit
+    val time = when (val expireAtValue = sub?.expireAt) {
+        null -> SubscriptionUsage.Time.NoLimit
         else -> {
-            val expireAt = sub.expireAt.toLong()
+            val expireAt = expireAtValue
             val now = System.currentTimeMillis()
 
             if (expireAt <= now) {
