@@ -859,38 +859,35 @@ fun SubscriptionStrip(
     // RefreshAccountNow() refreshes this data online before calling refresh().
     val sub = subscriptionUsage.singleOrNull()
 
-    val volume = if (sub != null && sub.totalBytes != null && sub.usedBytes != null) {
-        val total = sub.totalBytes
-        val used = sub.usedBytes
-        if (total <= 0L) {
-            SubscriptionUsage.Volume.Unlimited(used)
+    val totalBytes = sub?.totalBytes
+    val usedBytes = sub?.usedBytes
+
+    val volume = if (totalBytes != null && usedBytes != null) {
+        if (totalBytes <= 0L) {
+            SubscriptionUsage.Volume.Unlimited(usedBytes)
         } else {
+            val remainingBytes = sub?.remainingBytes ?: (totalBytes - usedBytes).coerceAtLeast(0L)
             SubscriptionUsage.Volume.Limited(
-                usedBytes = used,
-                quotaBytes = total,
-                remainingBytes = sub.remainingBytes ?: (total - used).coerceAtLeast(0L),
+                usedBytes = usedBytes,
+                quotaBytes = totalBytes,
+                remainingBytes = remainingBytes,
             )
         }
     } else {
         SubscriptionUsage.Volume.Unknown
     }
 
-    val time = when (val expireAtValue = sub?.expireAt) {
-        null -> SubscriptionUsage.Time.NoLimit
-        else -> {
-            val expireAt = expireAtValue
-            val now = System.currentTimeMillis()
-
-            if (expireAt <= now) {
-                SubscriptionUsage.Time.Expired
-            } else {
-                val days = kotlin.math.ceil(
-                    (expireAt - now) / 86_400_000.0
-                ).toInt().coerceAtLeast(1)
-                SubscriptionUsage.Time.DaysLeft(days)
-            }
+    val time = sub?.expireAt?.let { expireAt ->
+        val now = System.currentTimeMillis()
+        if (expireAt <= now) {
+            SubscriptionUsage.Time.Expired
+        } else {
+            val days = kotlin.math.ceil(
+                (expireAt - now) / 86_400_000.0
+            ).toInt().coerceAtLeast(1)
+            SubscriptionUsage.Time.DaysLeft(days)
         }
-    }
+    } ?: SubscriptionUsage.Time.NoLimit
 
     val hasLimitedVolume = volume is SubscriptionUsage.Volume.Limited
     val usedFraction = (volume as? SubscriptionUsage.Volume.Limited)?.usedFraction ?: 0f
