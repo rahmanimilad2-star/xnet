@@ -25,7 +25,7 @@ data class UiState(
     val loginErrorCode: String? = null, // xnet-single-device-v1
     val account: Account? = null,
     val configs: List<VpnConfig> = Repository.session.loadConfigs()?.configs.orEmpty(),
-    val subscriptionUsage: List<com.milad.vpn.data.SubscriptionUsage> = emptyList(),
+    val subscriptionUsage: List<com.milad.vpn.data.SubscriptionItemUsage> = emptyList(),
     val selectedConfigId: Long = Repository.session.selectedConfigId,
     /** message for the subscription/config problem (quota, expiry, no config…) */
     val blockMessage: String? = null,
