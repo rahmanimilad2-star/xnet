@@ -663,9 +663,20 @@ private fun StatCard(title: String, value: String, icon: ImageVector, tint: Colo
 // ------------------------------------------------------------ subscription (xnet-subscription-v1)
 // All values come from the signed-in user's /account response; the password is the one this
 // device logged in with (encrypted in SessionStore). Nothing here is hard-coded.
-private fun planLabel(acc: Account, english: Boolean): String =
-    if (acc.unlimited || acc.quotaBytes <= 0) (if (english) "Unlimited" else "نامحدود")
-    else "${Format.bytes(acc.quotaBytes)} · ${if (english) "Data plan" else "حجمی"}"
+private fun planLabel(acc: Account, english: Boolean): String {
+    val sub = acc.subscriptionUsage
+    return if (sub != null) {
+        if (sub.unlimited || sub.totalBytes <= 0) {
+            if (english) "Unlimited" else "نامحدود"
+        } else {
+            "${Format.bytes(sub.totalBytes)} · ${if (english) "Data plan" else "حجمی"}"
+        }
+    } else if (acc.unlimited || acc.quotaBytes <= 0) {
+        if (english) "Unlimited" else "نامحدود"
+    } else {
+        "${Format.bytes(acc.quotaBytes)} · ${if (english) "Data plan" else "حجمی"}"
+    }
+}
 
 private fun statusColor(status: String): Color = when (status) {
     "ACTIVE" -> Ok

@@ -2,6 +2,13 @@ package com.milad.vpn.data
 
 import org.json.JSONObject
 
+data class SubscriptionUsage(
+    val totalBytes: Long,
+    val usedBytes: Long,
+    val remainingBytes: Long?,
+    val unlimited: Boolean,
+)
+
 data class Account(
     val username: String,
     val status: String,            // ACTIVE | BLOCKED | EXPIRED | QUOTA_EXCEEDED
@@ -19,6 +26,7 @@ data class Account(
     val usageKnown: Boolean = true,
     /** Backend-computed, display-only upstream Subscription-Userinfo; only sent when usage_known is false. */
     val subscriptionUserinfo: SubscriptionUserinfo? = null,
+    val subscriptionUsage: SubscriptionUsage? = null,
 ) {
     val isActive get() = status == "ACTIVE"
 
