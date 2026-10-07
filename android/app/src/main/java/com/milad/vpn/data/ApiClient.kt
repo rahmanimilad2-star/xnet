@@ -87,21 +87,21 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
         }
 
         val account = Account.from(j.getJSONObject("account"))
-        val firstSubscriptionUsage = usageArr
-            ?.optJSONObject(0)
+        val accountSubscriptionUsage = subscriptionUsage
+            .singleOrNull()
             ?.let { sub ->
-                val total = sub.optLong("total_bytes", 0L)
-                val used = sub.optLong("used_bytes", 0L)
-                val unlimited = sub.optBoolean("unlimited", total == 0L)
+                val total = sub.totalBytes ?: 0L
+                val used = sub.usedBytes ?: 0L
+                val unlimited = total <= 0L
                 SubscriptionUsage(
                     totalBytes = total,
                     usedBytes = used,
-                    remainingBytes = if (unlimited) null else maxOf(0L, total - used),
+                    remainingBytes = if (unlimited) null else sub.remainingBytes,
                     unlimited = unlimited,
                 )
             }
 
-        return account.copy(subscriptionUsage = firstSubscriptionUsage) to ConfigBundle(
+        return account.copy(subscriptionUsage = accountSubscriptionUsage) to ConfigBundle(
             configs = list,
             version = j.optString("version"),
             syncAfterSeconds = j.optInt("sync_after_seconds", 300),

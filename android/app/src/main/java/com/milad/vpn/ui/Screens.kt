@@ -459,7 +459,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                             }
                         }
                     }
-                    ui.account?.let { SubscriptionStrip(it, english, onOpenAccount) }
+                    ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
                 }
             }
         }
@@ -849,13 +849,42 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
 @Composable
 fun SubscriptionStrip(
     acc: Account,
+    subscriptionUsage: List<com.milad.vpn.data.SubscriptionItemUsage>,
     english: Boolean,
     onOpen: () -> Unit,
 ) {
     val context = LocalContext.current
-    // Backend values only (Account from /api/v1/configs); see SubscriptionUsage.
-    val volume = SubscriptionUsage.volume(acc)
-    val time = SubscriptionUsage.time(acc)
+
+    // This is the authenticated user's subscription_usage from /api/v1/configs.
+    // RefreshAccountNow() refreshes this data online before calling refresh().
+    val sub = subscriptionUsage.singleOrNull()
+
+    val volume = if (sub != null && sub.totalBytes != null && sub.usedBytes != null) {
+        val total = sub.totalBytes
+        val used = sub.usedBytes
+        if (total <= 0L) {
+            SubscriptionUsage.Volume.Unlimited(used)
+        } else {
+            SubscriptionUsage.Volume.Limited(
+                usedBytes = used,
+                quotaBytes = total,
+                remainingBytes = sub.remainingBytes ?: (total - used).coerceAtLeast(0L),
+            )
+        }
+    } else {
+        SubscriptionUsage.Volume.Unknown
+    }
+
+    val time = when {
+        sub?.expireAt == null -> SubscriptionUsage.Time.NoLimit
+        sub.expireAt <= System.currentTimeMillis() -> SubscriptionUsage.Time.Expired
+        else -> {
+            val days = kotlin.math.ceil(
+                (sub.expireAt - System.currentTimeMillis()) / 86_400_000.0
+            ).toInt().coerceAtLeast(1)
+            SubscriptionUsage.Time.DaysLeft(days)
+        }
+    }
 
     val hasLimitedVolume = volume is SubscriptionUsage.Volume.Limited
     val usedFraction = (volume as? SubscriptionUsage.Volume.Limited)?.usedFraction ?: 0f
@@ -863,13 +892,15 @@ fun SubscriptionStrip(
     val volumeTitle = when (volume) {
         SubscriptionUsage.Volume.Unknown -> if (english) "Subscription usage" else "مصرف اشتراک"
         is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited" else "نامحدود"
-        is SubscriptionUsage.Volume.Limited -> Format.bytes(volume.usedBytes)
+        is SubscriptionUsage.Volume.Limited -> Format.bytes(volume.remainingBytes)
     }
 
     val volumeSubtitle = when (volume) {
         SubscriptionUsage.Volume.Unknown -> if (english) "Usage not available" else "حجم نامشخص"
         is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited volume" else "حجم نامحدود"
-        is SubscriptionUsage.Volume.Limited -> if (english) "${Format.bytes(volume.usedBytes)} consumed of ${Format.bytes(volume.quotaBytes)}" else "${Format.bytes(volume.usedBytes)} مصرف شده از ${Format.bytes(volume.quotaBytes)}"
+        is SubscriptionUsage.Volume.Limited ->
+            if (english) "${Format.bytes(volume.remainingBytes)} remaining of ${Format.bytes(volume.quotaBytes)}"
+            else "${Format.bytes(volume.remainingBytes)} باقی‌مانده از ${Format.bytes(volume.quotaBytes)}"
     }
 
     val daysText = when (time) {
