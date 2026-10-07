@@ -877,12 +877,18 @@ fun SubscriptionStrip(
 
     val time = when {
         sub?.expireAt == null -> SubscriptionUsage.Time.NoLimit
-        sub.expireAt <= System.currentTimeMillis() -> SubscriptionUsage.Time.Expired
         else -> {
-            val days = kotlin.math.ceil(
-                (sub.expireAt - System.currentTimeMillis()) / 86_400_000.0
-            ).toInt().coerceAtLeast(1)
-            SubscriptionUsage.Time.DaysLeft(days)
+            val expireAt = sub.expireAt.toLong()
+            val now = System.currentTimeMillis()
+
+            if (expireAt <= now) {
+                SubscriptionUsage.Time.Expired
+            } else {
+                val days = kotlin.math.ceil(
+                    (expireAt - now) / 86_400_000.0
+                ).toInt().coerceAtLeast(1)
+                SubscriptionUsage.Time.DaysLeft(days)
+            }
         }
     }
 
