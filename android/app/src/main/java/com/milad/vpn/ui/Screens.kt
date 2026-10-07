@@ -863,13 +863,13 @@ fun SubscriptionStrip(
     val volumeTitle = when (volume) {
         SubscriptionUsage.Volume.Unknown -> if (english) "Subscription usage" else "مصرف اشتراک"
         is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited" else "نامحدود"
-        is SubscriptionUsage.Volume.Limited -> Format.bytes(volume.remainingBytes)
+        is SubscriptionUsage.Volume.Limited -> Format.bytes(volume.usedBytes)
     }
 
     val volumeSubtitle = when (volume) {
         SubscriptionUsage.Volume.Unknown -> if (english) "Usage not available" else "حجم نامشخص"
         is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited volume" else "حجم نامحدود"
-        is SubscriptionUsage.Volume.Limited -> if (english) "of ${Format.bytes(volume.quotaBytes)}" else "از ${Format.bytes(volume.quotaBytes)}"
+        is SubscriptionUsage.Volume.Limited -> if (english) "${Format.bytes(volume.usedBytes)} consumed of ${Format.bytes(volume.quotaBytes)}" else "${Format.bytes(volume.usedBytes)} مصرف شده از ${Format.bytes(volume.quotaBytes)}"
     }
 
     val daysText = when (time) {
