@@ -98,7 +98,7 @@ data class VpnConfig(
     }
 }
 
-data class SubscriptionUsage(
+data class SubscriptionItemUsage(
     val id: Long,
     val name: String,
     val uploadBytes: Long?,
@@ -122,7 +122,7 @@ data class SubscriptionUsage(
         }
 
     companion object {
-        fun from(j: JSONObject) = SubscriptionUsage(
+        fun from(j: JSONObject) = SubscriptionItemUsage(
             id = j.getLong("id"),
             name = j.optString("name"),
             uploadBytes = if (j.isNull("upload_bytes")) null else j.getLong("upload_bytes"),
@@ -138,7 +138,7 @@ data class ConfigBundle(
     val configs: List<VpnConfig>,
     val version: String,
     val syncAfterSeconds: Int,
-    val subscriptionUsage: List<SubscriptionUsage> = emptyList(),
+    val subscriptionUsage: List<SubscriptionItemUsage> = emptyList(),
 )
 
 /** Server-side error with a machine readable [code] (e.g. QUOTA_EXCEEDED, NO_CONFIG, UNAUTHORIZED). */

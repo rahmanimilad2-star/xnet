@@ -82,7 +82,7 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
             emptyList()
         } else {
             (0 until usageArr.length()).map {
-                SubscriptionUsage.from(usageArr.getJSONObject(it))
+                SubscriptionItemUsage.from(usageArr.getJSONObject(it))
             }
         }
 
