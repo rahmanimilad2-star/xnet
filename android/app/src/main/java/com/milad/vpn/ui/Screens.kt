@@ -72,8 +72,8 @@ import com.milad.vpn.vpn.VpnStatus
 import kotlinx.coroutines.delay
 
 // ------------------------------------------------------------------------------------ tokens
-private val Brand = Color(0xFF4F5BFF)
-private val BrandDeep = Color(0xFF7B4DFF)
+private val Brand = Color(0xFF1FA8FF)
+private val BrandDeep = Color(0xFF2F5BFF)
 private val Cyan = Color(0xFF22D3FF)
 private val CyanDeep = Color(0xFF1456FF)
 private val Steel = Color(0xFF8FA3D6)
@@ -85,14 +85,14 @@ private val Warn = Color(0xFFF59E0B)
 private val Bad = Color(0xFFEF4444)
 
 private val LightBg = Color(0xFFF4F6FB)
-private val DarkBg = Color(0xFF0B0D12)
-private val DarkSurface = Color(0xFF151821)
-private val DarkSurface2 = Color(0xFF1D212D)
+private val DarkBg = Color(0xFF02050C)
+private val DarkSurface = Color(0xFF0A1226)
+private val DarkSurface2 = Color(0xFF111B33)
 
 private const val DEVELOPER_NAME = "M.R"
 private const val APP_TITLE = "Xnet"
 
-private val CardShape = RoundedCornerShape(20.dp)
+private val CardShape = RoundedCornerShape(18.dp)
 private val HomeCardShape = RoundedCornerShape(16.dp)
 
 // ---------------------------------------------------------------------------------- haptics
@@ -122,17 +122,17 @@ private fun vibrate(context: Context, strong: Boolean = false) {
 fun AppTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
     val colors = if (darkTheme) {
         darkColorScheme(
-            primary = Color(0xFF7C86FF),
+            primary = Color(0xFF22B8FF),
             onPrimary = Color.White,
             secondary = BrandDeep,
             background = DarkBg,
-            onBackground = Color(0xFFE8EAF2),
+            onBackground = Color(0xFFE8EEFF),
             surface = DarkSurface,
-            onSurface = Color(0xFFE8EAF2),
+            onSurface = Color(0xFFE8EEFF),
             surfaceVariant = DarkSurface2,
-            onSurfaceVariant = Color(0xFF9AA1B5),
-            outline = Color(0xFF2A2F3D),
-            outlineVariant = Color(0xFF232733),
+            onSurfaceVariant = Color(0xFF8C9AC0),
+            outline = Color(0xFF22304F),
+            outlineVariant = Color(0xFF1A2640),
             surfaceContainer = DarkSurface,
             surfaceContainerHigh = DarkSurface2,
         )
@@ -141,7 +141,7 @@ fun AppTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
             primary = Brand,
             onPrimary = Color.White,
             secondary = BrandDeep,
-            background = Color(0xFFEEF1F8),
+            background = Color(0xFFEDF3FB),
             onBackground = Color(0xFF151827),
             surface = Color(0xFFF9FAFD),
             onSurface = Color(0xFF151827),
@@ -161,6 +161,15 @@ fun AppTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
 
 @Composable
 private fun muted() = MaterialTheme.colorScheme.onSurfaceVariant
+
+/** Shared Design System card outline: thin cyan-to-blue gradient line. */
+@Composable
+private fun glassBorder(strength: Float = 1f): androidx.compose.foundation.BorderStroke {
+    val c = MaterialTheme.colorScheme.primary
+    return androidx.compose.foundation.BorderStroke(
+        1.dp, Brush.linearGradient(listOf(c.copy(alpha = 0.40f * strength), BrandDeep.copy(alpha = 0.14f * strength))),
+    )
+}
 
 // ------------------------------------------------------------------------------------- root
 @Composable
@@ -190,14 +199,9 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
     var show by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    Box(Modifier.fillMaxSize()) {
-        // gradient hero behind the card
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-                .background(Brush.linearGradient(listOf(Brand, BrandDeep)))
-        )
+    MaterialTheme(colorScheme = HomeScheme) {
+    Box(Modifier.fillMaxSize().background(HomeBg)) {
+        HomeBackdrop(Cyan, 0.6f)
         Column(
             Modifier
                 .fillMaxSize()
@@ -212,21 +216,22 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                 Modifier
                     .size(76.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.18f)),
+                    .background(Color(0xFF0A1226))
+                    .border(1.dp, Cyan.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center,
-            ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(42.dp)) }
+            ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(46.dp)) }
             Spacer(Modifier.height(14.dp))
-            Text(APP_TITLE, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+            Text(APP_TITLE.uppercase(), color = Color(0xFFE8EEFF), fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
             Text(
                 if (english) "Fast · Private · Secure" else "سریع · خصوصی · امن",
-                color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp,
+                color = muted(), fontSize = 14.sp,
             )
             Spacer(Modifier.height(30.dp))
 
             Card(
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                border = glassBorder(), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -275,6 +280,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
     }
 }
 
@@ -329,6 +335,7 @@ fun MainScaffold(
                 // Home paints its background behind the status bar and pads its own content
                 .then(if (tab == 0) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))),
         ) {
+            if (tab != 0 && darkMode) HomeBackdrop(Cyan, 0.4f)
             when (tab) {
                 0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
                 1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null)
@@ -427,8 +434,6 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             ?: if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
         Phase.CONNECTED -> if (english) "Your connection is secured" else "اتصال شما امن است"
     }
-    val acc = ui.account?.takeIf { it.usageKnown }
-
     MaterialTheme(colorScheme = HomeScheme) {
         BoxWithConstraints(Modifier.fillMaxSize().background(HomeBg)) {
             val viewport = maxHeight
@@ -483,13 +488,11 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
 
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         ServerCard(flagOf(country), serverName, serverSub, color, english, onOpenServers)
-                        // real values only: live ping from the VPN state, traffic totals from the account (— when unknown)
+                        // real values only: live ping from the VPN state and the selected config protocol (— when unknown)
                         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             HomeStat(if (english) "PING" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Modifier.weight(1f))
                             VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
-                            HomeStat(if (english) "DOWNLOAD" else "دانلود", acc?.let { Format.bytes(it.downloadBytes) } ?: "—", Modifier.weight(1f))
-                            VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
-                            HomeStat(if (english) "UPLOAD" else "آپلود", acc?.let { Format.bytes(it.uploadBytes) } ?: "—", Modifier.weight(1f))
+                            HomeStat(if (english) "PROTOCOL" else "پروتکل", shownCfg?.protocol?.uppercase()?.takeIf { it.isNotBlank() } ?: "—", Modifier.weight(1f))
                         }
                         ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
                     }
@@ -558,7 +561,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surfaceContainer,
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)),
-            shadowElevation = 10.dp,
+            shadowElevation = 0.dp,
         ) {
             Row(Modifier.height(68.dp).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 labels.forEachIndexed { i, label ->
@@ -580,7 +583,8 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                             Modifier
                                 .size(width = 56.dp, height = 32.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(pill),
+                                .background(pill)
+                                .border(1.dp, if (sel) tint.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(50)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -834,11 +838,8 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
         Modifier.fillMaxWidth(),
         shape = CardShape,
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainerHigh),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        border = glassBorder(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         // header: identity + status
         Row(
@@ -985,6 +986,7 @@ fun SubscriptionStrip(
             },
         shape = CardShape,
         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+        border = glassBorder(),
     ) {
         Column(
             Modifier
@@ -1092,7 +1094,10 @@ fun SubscriptionStrip(
 
 @Composable
 fun Banner(text: String, color: Color) {
-    Surface(color = color.copy(alpha = 0.12f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        color = color.copy(alpha = 0.10f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.35f)),
+    ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Warning, null, tint = color)
             Spacer(Modifier.width(10.dp))
@@ -1110,7 +1115,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text(if (english) "Servers" else "سرورها", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text(if (english) "SERVERS" else "سرورها", fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 4.sp else 0.sp)
             Text(
                 if (english) "${Format.num(ui.configs.size)} locations available" else "${Format.num(ui.configs.size)} سرور در دسترس",
                 color = muted(), fontSize = 13.sp,
@@ -1137,7 +1142,9 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         if (ui.configs.isEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.CloudOff, null, tint = muted(), modifier = Modifier.size(48.dp))
+                    Box(Modifier.size(84.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.CloudOff, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(38.dp))
+                    }
                     Spacer(Modifier.height(10.dp))
                     Text(
                         ui.blockMessage ?: if (english) "No server available yet" else "فعلاً سروری در دسترس نیست",
@@ -1156,14 +1163,14 @@ fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, conne
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(if (selected) 2.dp else 0.dp, if (selected) primary else Color.Transparent, CardShape)
             .clip(CardShape)
             .clickable { vibrate(context); onClick() },
         shape = CardShape,
-        colors = CardDefaults.cardColors(if (selected) primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface),
+        border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, Brush.linearGradient(listOf(primary, BrandDeep))) else glassBorder(0.6f),
+        colors = CardDefaults.cardColors(if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(CircleShape).border(1.dp, primary.copy(alpha = if (selected) 0.7f else 0.25f), CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                 Text(flag, fontSize = 22.sp)
             }
             Spacer(Modifier.width(12.dp))
@@ -1285,6 +1292,7 @@ fun AccountScreen(
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
+            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(24.dp)),
             icon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Bad) },
             title = { Text(if (english) "Sign out?" else "خروج از حساب؟") },
             text = {
@@ -1302,6 +1310,7 @@ fun AccountScreen(
                 TextButton(onClick = { confirm = false; vibrate(context) }) { Text(if (english) "Cancel" else "انصراف") }
             },
             containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp),
         )
     }
 }
@@ -1312,11 +1321,8 @@ private fun AccountHero(acc: Account, english: Boolean) {
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-        ),
-        shadowElevation = 4.dp,
+        border = glassBorder(),
+        shadowElevation = 0.dp,
     ) {
         Row(
             Modifier
@@ -1386,11 +1392,8 @@ private fun AccountSettingsCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f),
-        ),
-        shadowElevation = 3.dp,
+        border = glassBorder(),
+        shadowElevation = 0.dp,
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), content = content)
     }
@@ -1443,11 +1446,8 @@ private fun SupportCard(english: Boolean, supportTelegram: String) {
             },
         shape = CardShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-        ),
-        shadowElevation = 3.dp,
+        border = glassBorder(),
+        shadowElevation = 0.dp,
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
