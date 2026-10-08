@@ -973,6 +973,7 @@ private fun flagOf(country: String): String {
     }.joinToString("")
 }
 
+@Composable
 fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, pingText: String? = null, onClick: () -> Unit) {
     val context = LocalContext.current
     val primary = MaterialTheme.colorScheme.primary
