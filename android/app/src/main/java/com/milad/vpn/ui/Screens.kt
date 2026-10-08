@@ -19,6 +19,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -62,6 +64,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.milad.vpn.R
 import com.milad.vpn.data.Account
 import com.milad.vpn.data.VpnConfig
 import com.milad.vpn.vpn.Phase
@@ -207,7 +210,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color.White.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(42.dp)) }
+            ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(42.dp)) }
             Spacer(Modifier.height(14.dp))
             Text(APP_TITLE, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
             Text(
@@ -404,7 +407,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                                     Modifier.size(30.dp).clip(RoundedCornerShape(10.dp))
                                         .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
                                     contentAlignment = Alignment.Center,
-                                ) { Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(17.dp)) }
+                                ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(17.dp)) }
                                 Spacer(Modifier.width(9.dp))
                                 Text(APP_TITLE, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp)
                             }
