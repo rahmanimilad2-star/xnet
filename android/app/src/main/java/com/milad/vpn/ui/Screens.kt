@@ -354,7 +354,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                     Text(hint, color = muted(), fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
                 }
                 Spacer(Modifier.height(if (short) 18.dp else 28.dp))
-                ServerCard(flagOf(shown?.country), serverName, serverSub, accent, english, onOpenServers)
+                ServerCard(flagOf(shown?.country ?: ""), serverName, serverSub, accent, english, onOpenServers)
                 Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)).border(1.dp, MaterialTheme.colorScheme.outline), verticalAlignment = Alignment.CenterVertically) {
                     HomeStat(if (english) "PING" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Modifier.weight(1f))
@@ -420,7 +420,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             drawCircle(c1.copy(alpha = if (connected) 0.50f else 0.24f), outer * 1.02f, center, style = Stroke(2f))
             drawCircle(c1.copy(alpha = 0.16f), outer * 0.83f, center, style = Stroke(1f))
             if (busy) {
-                drawArc(c1.copy(alpha = 0.9f), phaseSweep, 85f, false, Offset(center.x - outer, center.y - outer), androidx.compose.ui.geometry.Size(outer * 2f, outer * 2f), Stroke(4f, cap = StrokeCap.Round))
+                drawArc(c1.copy(alpha = 0.9f), phaseSweep, 85f, false, Offset(center.x - outer, center.y - outer), androidx.compose.ui.geometry.Size(outer * 2f, outer * 2f), style = Stroke(4f, cap = StrokeCap.Round))
                 drawCircle(c1.copy(alpha = (1f - ripple) * 0.35f), inner + (outer - inner) * ripple, center, style = Stroke(2f))
             }
         }
