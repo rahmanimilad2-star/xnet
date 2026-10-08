@@ -66,20 +66,41 @@ private val XnetDark = darkColorScheme(
 )
 
 private val XnetLight = lightColorScheme(
-    primary = Color(0xFF0A84E0),
+    // XNET Light: cool, layered, premium — never pure white.
+    primary = Color(0xFF087FD1),
     onPrimary = Color.White,
-    secondary = BrandDeep,
-    background = Color(0xFFEDF3FB),
-    onBackground = Color(0xFF0B1426),
+
+    secondary = Color(0xFF1769E0),
+    onSecondary = Color.White,
+
+    tertiary = Color(0xFF009FC5),
+    onTertiary = Color.White,
+
+    background = Color(0xFFF2F7FC),
+    onBackground = Color(0xFF0B1728),
+
     surface = Color(0xFFF8FBFF),
-    onSurface = Color(0xFF0B1426),
-    surfaceVariant = Color(0xFFE2EAF6),
-    onSurfaceVariant = Color(0xFF5A6788),
-    outline = Color(0xFFCBD6E8),
-    outlineVariant = Color(0xFFDCE4F1),
-    surfaceContainer = Color(0xFFF1F6FD),
-    surfaceContainerHigh = Color(0xFFE9F0FA),
+    onSurface = Color(0xFF0B1728),
+
+    surfaceVariant = Color(0xFFE7EFF8),
+    onSurfaceVariant = Color(0xFF60738A),
+
+    outline = Color(0xFFC4D4E5),
+    outlineVariant = Color(0xFFD9E5F0),
+
+    surfaceContainerLowest = Color(0xFFEDF4FA),
+    surfaceContainerLow = Color(0xFFF1F6FB),
+    surfaceContainer = Color(0xFFF5F9FD),
+    surfaceContainerHigh = Color(0xFFEAF2F9),
+    surfaceContainerHighest = Color(0xFFE1EBF4),
+
+    surfaceTint = Color(0xFF087FD1),
+
+    inverseSurface = Color(0xFF142438),
+    inverseOnSurface = Color(0xFFEAF3FF),
+
     error = Bad,
+    onError = Color.White,
 )
 
 @Composable
