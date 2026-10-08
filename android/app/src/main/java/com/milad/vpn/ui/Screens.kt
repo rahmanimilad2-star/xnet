@@ -324,20 +324,21 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HomeBackdrop(accent, if (vpn.phase == Phase.CONNECTED) 0.78f else 0.28f)
-        val short = maxHeight < 650.dp
+        val viewportHeight = maxHeight
+        val short = viewportHeight < 650.dp
         Column(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = maxHeight), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = viewportHeight), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(if (short) 12.dp else 22.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
                         Text(if (english) "SECURE VPN" else "وی‌پی‌ان امن", color = muted(), fontSize = 10.sp, letterSpacing = if (english) 3.sp else 0.sp)
                     }
-                    StatusPill(look.label, accent, vpn.phase == Phase.CONNECTING || vpn.phase == Phase.RECONNECTING)
+                    StatusChip(look.label, english, onDark = true)
                 }
                 ui.blockMessage?.let { Spacer(Modifier.height(10.dp)); Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
                 Spacer(Modifier.height(if (short) 12.dp else 26.dp))
