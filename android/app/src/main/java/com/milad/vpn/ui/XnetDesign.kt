@@ -37,7 +37,6 @@ internal val Bad = Color(0xFFEF4444)
 // Shared visual constants used by the redesigned presentation layer.
 internal val XnetSurface = Color(0xFF08111F)
 internal val XnetSurfaceSecondary = Color(0xFF0A1424)
-internal val XnetBorder = Color(0xFF18365A)
 internal val XnetPrimaryText = Color(0xFFEAF3FF)
 internal val XnetMutedText = Color(0xFF8FA3C7)
 internal val XnetCardShape = RoundedCornerShape(20.dp)
@@ -106,6 +105,13 @@ internal fun xnetFieldColors() = androidx.compose.material3.OutlinedTextFieldDef
 @Composable
 internal fun muted() = MaterialTheme.colorScheme.onSurfaceVariant
 
+/** Theme-aware structural colors. Never reuse the dark palette in Light mode. */
+@Composable
+internal fun xnetBorder() = MaterialTheme.colorScheme.outline
+
+@Composable
+internal fun xnetGrid() = MaterialTheme.colorScheme.outlineVariant
+
 @Composable
 internal fun isDarkTheme() = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
@@ -128,7 +134,7 @@ private val Bokeh = listOf(
 internal fun HomeBackdrop(accent: Color, strength: Float) {
     val k = if (isDarkTheme()) 1f else 0.3f
     Canvas(Modifier.fillMaxSize()) {
-        val grid = Color(0xFF18365A).copy(alpha = 0.075f * k)
+        val grid = xnetGrid().copy(alpha = 0.22f * k)
         val step = 42.dp.toPx()
         var x = 0f
         while (x <= size.width) {
@@ -147,7 +153,7 @@ internal fun HomeBackdrop(accent: Color, strength: Float) {
             )
         )
         Bokeh.forEach { d ->
-            val c = if (d[3] > 0.5f) Cyan else Color(0xFF2F5BFF)
+            val c = if (d[3] > 0.5f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
             val at = Offset(size.width * d[0], size.height * d[1])
             drawCircle(
                 Brush.radialGradient(listOf(c.copy(alpha = (0.16f + 0.10f * strength) * k), Color.Transparent), center = at, radius = size.width * d[2] * 2f),

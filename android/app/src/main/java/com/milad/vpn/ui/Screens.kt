@@ -145,7 +145,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                 Modifier
                     .size(92.dp)
                     .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(BrandDeep.copy(alpha = .75f), XnetSurface)))
+                    .background(Brush.radialGradient(listOf(BrandDeep.copy(alpha = .75f), MaterialTheme.colorScheme.surface)))
                     .border(1.5.dp, Cyan.copy(alpha = 0.72f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(54.dp)) }
@@ -159,8 +159,8 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
 
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = XnetSurface.copy(alpha = .96f),
-                border = BorderStroke(1.dp, XnetBorder),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .96f),
+                border = BorderStroke(1.dp, xnetBorder()),
                 modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -297,7 +297,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     // does not expose the outlined Home/Public variants on GitHub Actions.
     val outlined = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
     Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
-        HorizontalDivider(color = XnetBorder.copy(alpha = .8f))
+        HorizontalDivider(color = xnetBorder().copy(alpha = .8f))
         Box(
             Modifier
                 .fillMaxWidth()
@@ -305,7 +305,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(XnetSurface.copy(alpha = .96f)).border(1.dp, XnetBorder, RoundedCornerShape(22.dp))) {
+          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .96f)).border(1.dp, xnetBorder(), RoundedCornerShape(22.dp))) {
             Row(Modifier.height(64.dp).padding(horizontal = 7.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 labels.forEachIndexed { i, label ->
                     val sel = tab == i
@@ -397,10 +397,10 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                         Text("XNET", color = MaterialTheme.colorScheme.onSurface, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 6.sp)
                         Text(if (english) "PRIVATE NETWORK" else "شبکه خصوصی", color = muted(), fontSize = 10.sp, letterSpacing = 2.2.sp)
                     }
-                    StatusChip(look.label, english, onDark = true)
+                    StatusChip(look.label, english, onDark = true, stateColor = accent)
                 }
                 Spacer(Modifier.height(18.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(XnetSurface.copy(alpha = .72f)).border(1.dp, accent.copy(alpha = .18f), RoundedCornerShape(24.dp)).padding(top = 20.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .72f)).border(1.dp, accent.copy(alpha = .18f), RoundedCornerShape(24.dp)).padding(top = 20.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (english) "CONNECTION STATUS" else "وضعیت اتصال", color = muted(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                     Spacer(Modifier.height(5.dp))
                     Text(if (english) look.label.uppercase() else look.label, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 2.3.sp else 0.sp)
@@ -436,7 +436,7 @@ private fun HomeSectionLabel(text: String) { Text(text, Modifier.fillMaxWidth(),
 @Composable
 private fun ServerSelector(flag: String, title: String, sub: String, accent: Color, ping: String?, connected: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
-    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = XnetSurface, border = BorderStroke(1.dp, accent.copy(alpha = .32f)), shadowElevation = 0.dp) {
+    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, border = BorderStroke(1.dp, accent.copy(alpha = .32f)), shadowElevation = 0.dp) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .11f)).border(1.dp, accent.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 20.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) { ping?.let { Text(it, color = muted(), fontSize = 11.sp) }; if (connected) { Box(Modifier.size(6.dp).clip(CircleShape).background(Ok)); Text("LIVE", color = Ok, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) } } }; Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(19.dp)) }
     }
 }
@@ -470,7 +470,7 @@ private fun ConnectionOrb(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
         }
         Box(
             Modifier.size(buttonSize * 0.62f).scale(pressScale).clip(CircleShape)
-                .background(Brush.radialGradient(listOf(c2.copy(alpha = if (connected) 0.96f else 0.72f), XnetSurface)))
+                .background(Brush.radialGradient(listOf(c2.copy(alpha = if (connected) 0.96f else 0.72f), MaterialTheme.colorScheme.surface)))
                 .border(if (connected) 3.dp else 2.dp, c1.copy(alpha = if (connected) 1f else 0.72f), CircleShape)
                 .clickable { pressed = true; vibrate(context, strong = true); onClick() },
             contentAlignment = Alignment.Center,
@@ -560,10 +560,10 @@ private fun copyToClipboard(context: Context, label: String, text: String, sensi
 }
 
 @Composable
-private fun StatusChip(status: String, english: Boolean, onDark: Boolean = false) {
-    val c = statusColor(status)
+private fun StatusChip(status: String, english: Boolean, onDark: Boolean = false, stateColor: Color? = null) {
+    val c = stateColor ?: statusColor(status)
     Surface(
-        color = if (onDark) Color.White.copy(alpha = 0.18f) else c.copy(alpha = 0.14f),
+        color = if (onDark) c.copy(alpha = 0.16f) else c.copy(alpha = 0.14f),
         shape = RoundedCornerShape(50),
     ) {
         Row(Modifier.padding(horizontal = 11.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -624,21 +624,26 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
         shadowElevation = 0.dp,
     ) {
         // header: identity + status
-        Row(
+        Column(
             Modifier.fillMaxWidth()
                 .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), Color.Transparent)))
                 .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
-                Text(acc.username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
+                    Text(acc.username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(if (english) "Subscription details" else "مشخصات اشتراک", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(acc.username, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(if (english) "Subscription details" else "مشخصات اشتراک", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(statusText(acc.status, english), color = muted(), fontSize = 12.sp)
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(statusText(acc.status, english), color = muted(), fontSize = 12.sp, modifier = Modifier.weight(1f))
+                StatusChip(acc.status, english)
             }
-            StatusChip(acc.status, english)
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
             DetailRow(Icons.Filled.Person, if (english) "User ID" else "شناسه کاربری", acc.username, ltr = true) {
@@ -938,7 +943,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
 @Composable
 private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(XnetSurface.copy(alpha = .92f)).border(1.dp, XnetBorder, RoundedCornerShape(24.dp)).padding(18.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .92f)).border(1.dp, xnetBorder(), RoundedCornerShape(24.dp)).padding(18.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 2.8.sp else 0.sp)
@@ -976,7 +981,7 @@ fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, conne
     val border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.85f)) else glassBorder(0.65f)
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else XnetSurface,
+        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
         border = border, shadowElevation = 0.dp,
     ) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1040,7 +1045,6 @@ fun AccountScreen(
             AccountScreenHeader(english)
         }
         if (acc != null) {
-            item { AccountHero(acc, english) }
             item { AccountSectionTitle(if (english) "Subscription" else "اشتراک", english) }
             item { SubscriptionPanel(acc, password, english) }
         } else {
@@ -1146,66 +1150,6 @@ private fun AccountScreenHeader(english: Boolean) {
         }
         Box(Modifier.size(38.dp).clip(CircleShape).background(Cyan.copy(alpha = .10f)).border(1.dp, Cyan.copy(alpha = .4f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.VerifiedUser, null, tint = Cyan, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
-@Composable
-private fun AccountHero(acc: Account, english: Boolean) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = glassBorder(),
-        shadowElevation = 0.dp,
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                            BrandDeep.copy(alpha = 0.08f),
-                        ),
-                    ),
-                )
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier
-                    .size(58.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    acc.username.take(1).uppercase(),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    if (english) "Your account" else "حساب کاربری شما",
-                    color = muted(),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    acc.username,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(statusText(acc.status, english), color = statusColor(acc.status), fontSize = 13.sp)
-            }
-            StatusChip(acc.status, english)
         }
     }
 }
