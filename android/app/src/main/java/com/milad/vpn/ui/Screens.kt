@@ -308,7 +308,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
     val connected = if (vpn.phase == Phase.CONNECTED) ui.configs.firstOrNull { it.id == vpn.configId } else null
     val shown = selected ?: connected
-    val serverName = shown?.name ?: if (ui.selectedConfigId < 0) (if (english) "Auto" else "خودکار") else autoLabel(ui, english)
+    val serverName = shown?.name ?: if (ui.selectedConfigId < 0) (if (english) "Auto" else "خودکار") else (if (english) "Selected server" else "سرور انتخاب‌شده")
     val serverSub = listOfNotNull(
         shown?.country?.takeIf { it.isNotBlank() },
         shown?.protocol?.uppercase()?.takeIf { it.isNotBlank() },
