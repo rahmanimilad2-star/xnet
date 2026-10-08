@@ -395,13 +395,14 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HomeBackdrop(accent, if (vpn.phase == Phase.CONNECTED) 0.78f else 0.28f)
-        val short = maxHeight < 650.dp
+        val viewportHeight = this@BoxWithConstraints.maxHeight
+        val short = viewportHeight < 650.dp
         Column(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = maxHeight), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = viewportHeight), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(if (short) 12.dp else 22.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
