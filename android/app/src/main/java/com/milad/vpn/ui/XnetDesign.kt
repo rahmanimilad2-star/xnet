@@ -133,8 +133,11 @@ private val Bokeh = listOf(
 @Composable
 internal fun HomeBackdrop(accent: Color, strength: Float) {
     val k = if (isDarkTheme()) 1f else 0.3f
+    val grid = xnetGrid().copy(alpha = 0.22f * k)
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+
     Canvas(Modifier.fillMaxSize()) {
-        val grid = xnetGrid().copy(alpha = 0.22f * k)
         val step = 42.dp.toPx()
         var x = 0f
         while (x <= size.width) {
@@ -153,7 +156,7 @@ internal fun HomeBackdrop(accent: Color, strength: Float) {
             )
         )
         Bokeh.forEach { d ->
-            val c = if (d[3] > 0.5f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+            val c = if (d[3] > 0.5f) primary else secondary
             val at = Offset(size.width * d[0], size.height * d[1])
             drawCircle(
                 Brush.radialGradient(listOf(c.copy(alpha = (0.16f + 0.10f * strength) * k), Color.Transparent), center = at, radius = size.width * d[2] * 2f),
