@@ -616,6 +616,7 @@ private fun DetailRow(
 fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
     val context = LocalContext.current
     var reveal by rememberSaveable { mutableStateOf(false) }
+
     Surface(
         Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -623,71 +624,256 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
         border = glassBorder(),
         shadowElevation = 0.dp,
     ) {
-        // header: identity + status
-        Column(
-            Modifier.fillMaxWidth()
-                .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), Color.Transparent)))
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
-                    Text(acc.username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(if (english) "Subscription details" else "مشخصات اشتراک", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(acc.username, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(statusText(acc.status, english), color = muted(), fontSize = 12.sp, modifier = Modifier.weight(1f))
-                StatusChip(acc.status, english)
-            }
-        }
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-            DetailRow(Icons.Filled.Person, if (english) "User ID" else "شناسه کاربری", acc.username, ltr = true) {
-                IconButton(onClick = { vibrate(context); copyToClipboard(context, "username", acc.username, false, english) }) {
-                    Icon(Icons.Filled.ContentCopy, if (english) "Copy" else "کپی", tint = muted(), modifier = Modifier.size(18.dp))
-                }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-            if (password != null) {
-                DetailRow(
-                    Icons.Filled.Key, if (english) "Password" else "رمز عبور",
-                    if (reveal) password else "••••••••", ltr = true, mono = reveal,
+        Column(Modifier.fillMaxWidth()) {
+
+            // Premium identity header
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.06f),
+                                Color.Transparent,
+                            )
+                        )
+                    )
+                    .padding(18.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (reveal) {
-                        IconButton(onClick = { vibrate(context); copyToClipboard(context, "password", password, true, english) }) {
-                            Icon(Icons.Filled.ContentCopy, if (english) "Copy" else "کپی", tint = muted(), modifier = Modifier.size(18.dp))
-                        }
-                    }
-                    IconButton(onClick = { vibrate(context); reveal = !reveal }) {
-                        Icon(
-                            if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            if (reveal) (if (english) "Hide" else "پنهان") else (if (english) "Show" else "نمایش"),
-                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp),
+                    Box(
+                        Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            acc.username.take(1).uppercase(),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
+
+                    Spacer(Modifier.width(13.dp))
+
+                    Column(
+                        Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            if (english) "Subscription" else "اشتراک",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            acc.username,
+                            color = muted(),
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    StatusChip(acc.status, english)
                 }
-            } else {
-                DetailRow(
-                    Icons.Filled.Key, if (english) "Password" else "رمز عبور",
-                    if (english) "Sign in again once to view" else "برای نمایش، یک‌بار دوباره وارد شوید",
-                    valueColor = muted(),
-                )
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-            DetailRow(Icons.Filled.WorkspacePremium, if (english) "Plan" else "پلن", planLabel(acc, english))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-            DetailRow(
-                Icons.Filled.Event, if (english) "Validity" else "اعتبار", expiryLine(acc, english),
-                valueColor = if (acc.expiresAt != null && (acc.daysLeft ?: 99) <= 3) Bad else Color.Unspecified,
-            )
+
+            // Clean information cards
+            Column(
+                Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+
+                // Password
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+                    )
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Key,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(21.dp)
+                        )
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (english) "Password" else "رمز عبور",
+                                color = muted(),
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                when {
+                                    password == null ->
+                                        if (english) "Sign in again to view" else "برای نمایش دوباره وارد شوید"
+                                    reveal -> password
+                                    else -> "••••••••"
+                                },
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        if (password != null) {
+                            if (reveal) {
+                                IconButton(
+                                    onClick = {
+                                        vibrate(context)
+                                        copyToClipboard(
+                                            context,
+                                            "password",
+                                            password,
+                                            true,
+                                            english
+                                        )
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Filled.ContentCopy,
+                                        contentDescription = if (english) "Copy" else "کپی",
+                                        tint = muted(),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    vibrate(context)
+                                    reveal = !reveal
+                                }
+                            ) {
+                                Icon(
+                                    if (reveal) Icons.Filled.VisibilityOff
+                                    else Icons.Filled.Visibility,
+                                    contentDescription = if (reveal) {
+                                        if (english) "Hide" else "پنهان"
+                                    } else {
+                                        if (english) "Show" else "نمایش"
+                                    },
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Plan
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+                    )
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.WorkspacePremium,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(21.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (english) "Plan" else "پلن",
+                                color = muted(),
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                planLabel(acc, english),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                // Validity
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+                    )
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Event,
+                            contentDescription = null,
+                            tint = if (
+                                acc.expiresAt != null &&
+                                (acc.daysLeft ?: 99) <= 3
+                            ) Bad else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(21.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (english) "Validity" else "اعتبار",
+                                color = muted(),
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                expiryLine(acc, english),
+                                color = if (
+                                    acc.expiresAt != null &&
+                                    (acc.daysLeft ?: 99) <= 3
+                                ) Bad else MaterialTheme.colorScheme.onSurface,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
 /** Home: subscription usage card (no credentials). Data = the refreshed [Account]; tap opens Account. */
 @Composable
 fun SubscriptionStrip(
