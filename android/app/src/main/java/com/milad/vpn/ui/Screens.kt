@@ -72,23 +72,6 @@ import com.milad.vpn.vpn.VpnStatus
 import kotlinx.coroutines.delay
 
 // ------------------------------------------------------------------------------------ tokens
-private val Brand = Color(0xFF1FA8FF)
-private val BrandDeep = Color(0xFF2F5BFF)
-private val Cyan = Color(0xFF22D3FF)
-private val CyanDeep = Color(0xFF1456FF)
-private val Steel = Color(0xFF8FA3D6)
-private val SteelDeep = Color(0xFF2A3A6B)
-private val HomeBg = Color(0xFF02050C)
-private val Ok = Color(0xFF12B76A)
-private val OkDeep = Color(0xFF0E9F6E)
-private val Warn = Color(0xFFF59E0B)
-private val Bad = Color(0xFFEF4444)
-
-private val LightBg = Color(0xFFF4F6FB)
-private val DarkBg = Color(0xFF02050C)
-private val DarkSurface = Color(0xFF0A1226)
-private val DarkSurface2 = Color(0xFF111B33)
-
 private const val DEVELOPER_NAME = "M.R"
 private const val APP_TITLE = "Xnet"
 
@@ -115,60 +98,6 @@ private fun vibrate(context: Context, strong: Boolean = false) {
         vibrator.vibrate(VibrationEffect.createOneShot(if (strong) 35L else 15L, amplitude))
     } catch (_: Exception) {
     }
-}
-
-// ------------------------------------------------------------------------------------ theme
-@Composable
-fun AppTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
-    val colors = if (darkTheme) {
-        darkColorScheme(
-            primary = Color(0xFF22B8FF),
-            onPrimary = Color.White,
-            secondary = BrandDeep,
-            background = DarkBg,
-            onBackground = Color(0xFFE8EEFF),
-            surface = DarkSurface,
-            onSurface = Color(0xFFE8EEFF),
-            surfaceVariant = DarkSurface2,
-            onSurfaceVariant = Color(0xFF8C9AC0),
-            outline = Color(0xFF22304F),
-            outlineVariant = Color(0xFF1A2640),
-            surfaceContainer = DarkSurface,
-            surfaceContainerHigh = DarkSurface2,
-        )
-    } else {
-        lightColorScheme(
-            primary = Brand,
-            onPrimary = Color.White,
-            secondary = BrandDeep,
-            background = Color(0xFFEDF3FB),
-            onBackground = Color(0xFF151827),
-            surface = Color(0xFFF9FAFD),
-            onSurface = Color(0xFF151827),
-            surfaceVariant = Color(0xFFE6EAF3),
-            onSurfaceVariant = Color(0xFF6B7287),
-            outline = Color(0xFFDDE1EC),
-            outlineVariant = Color(0xFFE9ECF3),
-            surfaceContainer = Color(0xFFF5F7FB),
-            surfaceContainerHigh = Color(0xFFEFF2F8),
-        )
-    }
-    MaterialTheme(colorScheme = colors) {
-        // Paint the whole window so dark mode covers every pixel (behind status/navigation bars too).
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
-    }
-}
-
-@Composable
-private fun muted() = MaterialTheme.colorScheme.onSurfaceVariant
-
-/** Shared Design System card outline: thin cyan-to-blue gradient line. */
-@Composable
-private fun glassBorder(strength: Float = 1f): androidx.compose.foundation.BorderStroke {
-    val c = MaterialTheme.colorScheme.primary
-    return androidx.compose.foundation.BorderStroke(
-        1.dp, Brush.linearGradient(listOf(c.copy(alpha = 0.40f * strength), BrandDeep.copy(alpha = 0.14f * strength))),
-    )
 }
 
 // ------------------------------------------------------------------------------------- root
@@ -199,8 +128,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
     var show by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    MaterialTheme(colorScheme = HomeScheme) {
-    Box(Modifier.fillMaxSize().background(HomeBg)) {
+    Box(Modifier.fillMaxSize()) {
         HomeBackdrop(Cyan, 0.6f)
         Column(
             Modifier
@@ -216,12 +144,12 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                 Modifier
                     .size(76.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF0A1226))
+                    .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, Cyan.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center,
             ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(46.dp)) }
             Spacer(Modifier.height(14.dp))
-            Text(APP_TITLE.uppercase(), color = Color(0xFFE8EEFF), fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
+            Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
             Text(
                 if (english) "Fast · Private · Secure" else "سریع · خصوصی · امن",
                 color = muted(), fontSize = 14.sp,
@@ -281,7 +209,6 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
             Spacer(Modifier.height(24.dp))
         }
     }
-    }
 }
 
 @Composable
@@ -324,7 +251,16 @@ fun MainScaffold(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snack) },
+        snackbarHost = {
+            SnackbarHost(snack) { data ->
+                Snackbar(
+                    data, shape = RoundedCornerShape(14.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    actionColor = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
         // xnet-ui-polish-v1: we handle system bars ourselves (edge-to-edge)
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = { XnetBottomBar(tab, english) { index -> if (tab != index) { vibrate(context); tab = index } } },
@@ -335,7 +271,7 @@ fun MainScaffold(
                 // Home paints its background behind the status bar and pads its own content
                 .then(if (tab == 0) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))),
         ) {
-            if (tab != 0 && darkMode) HomeBackdrop(Cyan, 0.4f)
+            if (tab != 0) HomeBackdrop(Cyan, 0.4f)
             when (tab) {
                 0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
                 1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null)
@@ -365,51 +301,6 @@ private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.pha
     Phase.DISCONNECTED -> PhaseLook(if (english) "Disconnected" else "قطع", Steel, SteelDeep)
 }
 
-private val HomeScheme = darkColorScheme(
-    primary = Cyan,
-    onPrimary = Color.White,
-    secondary = Color(0xFF3D7BFF),
-    background = HomeBg,
-    onBackground = Color(0xFFE8EEFF),
-    surface = Color(0xFF0A1226),
-    onSurface = Color(0xFFE8EEFF),
-    surfaceVariant = Color(0xFF111B33),
-    onSurfaceVariant = Color(0xFF8C9AC0),
-    outline = Color(0xFF22304F),
-    outlineVariant = Color(0xFF1A2640),
-    surfaceContainer = Color(0xFF0A1226),
-    surfaceContainerHigh = Color(0xFF111B33),
-)
-
-/** Soft bokeh dots (fractions of the canvas, so it scales to any screen). Purely decorative. */
-private val Bokeh = listOf(
-    floatArrayOf(0.12f, 0.10f, 0.05f, 0f), floatArrayOf(0.84f, 0.16f, 0.07f, 1f), floatArrayOf(0.30f, 0.30f, 0.035f, 1f),
-    floatArrayOf(0.92f, 0.42f, 0.05f, 0f), floatArrayOf(0.06f, 0.58f, 0.06f, 0f), floatArrayOf(0.78f, 0.74f, 0.06f, 1f),
-    floatArrayOf(0.20f, 0.86f, 0.05f, 0f), floatArrayOf(0.55f, 0.06f, 0.03f, 1f),
-)
-
-@Composable
-private fun HomeBackdrop(accent: Color, strength: Float) {
-    val t = rememberInfiniteTransition(label = "backdrop")
-    val breathe by t.animateFloat(0.85f, 1f, infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breathe")
-    Canvas(Modifier.fillMaxSize()) {
-        drawRect(
-            Brush.radialGradient(
-                listOf(accent.copy(alpha = 0.30f * strength * breathe), Color.Transparent),
-                center = Offset(size.width / 2f, size.height * 0.34f), radius = size.width * 0.95f,
-            )
-        )
-        Bokeh.forEach { d ->
-            val c = if (d[3] > 0.5f) Cyan else Color(0xFF2F5BFF)
-            drawCircle(
-                Brush.radialGradient(listOf(c.copy(alpha = 0.16f + 0.10f * strength), Color.Transparent),
-                    center = Offset(size.width * d[0], size.height * d[1]), radius = size.width * d[2] * 2f),
-                radius = size.width * d[2] * 2f, center = Offset(size.width * d[0], size.height * d[1]),
-            )
-        }
-    }
-}
-
 @Composable
 fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onOpenAccount: () -> Unit = {}, onToggle: () -> Unit) {
     val look = phaseLook(vpn, english)
@@ -434,8 +325,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             ?: if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
         Phase.CONNECTED -> if (english) "Your connection is secured" else "اتصال شما امن است"
     }
-    MaterialTheme(colorScheme = HomeScheme) {
-        BoxWithConstraints(Modifier.fillMaxSize().background(HomeBg)) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
             val viewport = maxHeight
             HomeBackdrop(color, if (vpn.phase == Phase.CONNECTED) 1f else if (vpn.phase == Phase.DISCONNECTED) 0.35f else 0.7f)
             Column(
@@ -453,7 +343,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(26.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text(APP_TITLE.uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp, color = Color(0xFFE8EEFF))
+                            Text(APP_TITLE.uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
                         ui.account?.let {
                             Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -479,7 +369,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                             var tick by remember { mutableIntStateOf(0) }
                             LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
                             key(tick) {
-                                Text(Format.duration(vpn.connectedSince), color = Color(0xFFE8EEFF), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                                Text(Format.duration(vpn.connectedSince), color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                             }
                             Spacer(Modifier.height(2.dp))
                         }
@@ -499,7 +389,6 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                 }
             }
         }
-    }
 }
 
 @Composable
@@ -507,7 +396,7 @@ private fun HomeStat(title: String, value: String, modifier: Modifier) {
     Column(modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, fontSize = 10.sp, color = muted(), letterSpacing = 1.5.sp, maxLines = 1)
         Spacer(Modifier.height(3.dp))
-        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFFE8EEFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -517,8 +406,8 @@ private fun ServerCard(flag: String, title: String, sub: String, accent: Color, 
     val context = LocalContext.current
     Surface(
         shape = HomeCardShape,
-        color = Color(0xFF0A1226).copy(alpha = 0.85f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.55f), Color(0xFF2F5BFF).copy(alpha = 0.25f)))),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.55f), BrandDeep.copy(alpha = 0.25f)))),
         modifier = Modifier.fillMaxWidth().clip(HomeCardShape).clickable { vibrate(context); onClick() },
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -551,7 +440,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
@@ -642,7 +531,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
     val glowLevel by animateFloatAsState(if (connected) 1f else if (busy) 0.6f else 0.2f, tween(600), label = "glowLevel")
     val t = rememberInfiniteTransition(label = "rings")
     val ring by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "ring")
-    val pulse by t.animateFloat(0.75f, 1f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse")
+    val pulse = 1f
     val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "spin")
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, tween(120, easing = FastOutSlowInEasing), label = "press")
@@ -662,7 +551,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             drawCircle(c1.copy(alpha = 0.10f + 0.18f * glowLevel), radius = half * 0.92f, style = Stroke(width = 1.5f))
             drawCircle(c1.copy(alpha = 0.08f + 0.14f * glowLevel), radius = half * 0.78f, style = Stroke(width = 1.5f))
             // expanding ripple while active
-            if (phase != Phase.DISCONNECTED) {
+            if (busy) {
                 for (i in 0..1) {
                     val p = (ring + i * 0.5f) % 1f
                     drawCircle(c1.copy(alpha = (1f - p) * 0.35f), radius = core + (half - core) * p, style = Stroke(width = 2f))
@@ -677,8 +566,8 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
                 )
             }
         }
-        val face = if (connected) Brush.radialGradient(listOf(c2.copy(alpha = 0.95f), Color(0xFF061233)))
-        else Brush.radialGradient(listOf(c2.copy(alpha = 0.55f), Color(0xFF070D1F)))
+        val face = if (connected) Brush.radialGradient(listOf(c2.copy(alpha = 0.9f), MaterialTheme.colorScheme.surface))
+        else Brush.radialGradient(listOf(c2.copy(alpha = 0.55f), MaterialTheme.colorScheme.surface))
         Box(
             Modifier
                 .size((buttonSize.value * 0.62f).dp)
@@ -696,7 +585,7 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             Icon(
                 if (connected) Icons.Filled.VerifiedUser else Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
-                tint = if (connected) Color.White else c1, modifier = Modifier.size((buttonSize.value * 0.26f).dp),
+                tint = if (connected) MaterialTheme.colorScheme.onSurface else c1, modifier = Modifier.size((buttonSize.value * 0.26f).dp),
             )
         }
     }
@@ -1240,11 +1129,11 @@ fun AccountScreen(
         item {
             AccountSectionTitle(if (english) "Preferences" else "تنظیمات", english)
             AccountSettingsCard {
-                SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک") {
+                SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک", subtitle = if (english) "Premium dark interface" else "ظاهر تیره و حرفه‌ای") {
                     Switch(checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) })
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                SettingRow(icon = Icons.Filled.Translate, title = if (english) "Language" else "زبان") {
+                SettingRow(icon = Icons.Filled.Translate, title = if (english) "Language" else "زبان", subtitle = if (english) "App language and direction" else "زبان و جهت نمایش برنامه") {
                     Segmented(
                         options = listOf("فارسی", "English"),
                         selected = if (english) 1 else 0,
@@ -1489,13 +1378,16 @@ private fun statusText(status: String, english: Boolean): String = when (status)
 }
 
 @Composable
-private fun SettingRow(icon: ImageVector, title: String, trailing: @Composable () -> Unit) {
+private fun SettingRow(icon: ImageVector, title: String, subtitle: String? = null, trailing: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Text(title, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+        Column(Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(title, fontWeight = FontWeight.Medium)
+            if (subtitle != null) Text(subtitle, color = muted(), fontSize = 12.sp, lineHeight = 15.sp)
+        }
         trailing()
     }
 }
@@ -1520,7 +1412,7 @@ private fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> U
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (on) Color.White else muted())
+                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (on) MaterialTheme.colorScheme.onPrimary else muted())
             }
         }
     }

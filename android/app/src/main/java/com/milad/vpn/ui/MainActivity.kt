@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         setContent {
             var english by remember { mutableStateOf(prefs.getBoolean("english", false)) }
-            var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
+            var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
             // Draw behind system bars; bar icons follow the in-app dark mode.
             DisposableEffect(darkMode) {
                 val transparent = android.graphics.Color.TRANSPARENT
