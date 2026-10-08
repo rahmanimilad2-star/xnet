@@ -76,23 +76,23 @@ private val XnetLight = lightColorScheme(
     tertiary = Color(0xFF00A6C7),
     onTertiary = Color.White,
 
-    background = Color(0xFFDCE6F1),
+    background = Color(0xFFC8D5E3),
     onBackground = Color(0xFF0A1424),
 
-    surface = Color(0xFFE7EEF6),
+    surface = Color(0xFFD5E0EB),
     onSurface = Color(0xFF0A1424),
 
-    surfaceVariant = Color(0xFFD2DEEB),
+    surfaceVariant = Color(0xFFBDCBD9),
     onSurfaceVariant = Color(0xFF52657D),
 
-    outline = Color(0xFFA9BDD2),
-    outlineVariant = Color(0xFFBFD0E2),
+    outline = Color(0xFF91A7BB),
+    outlineVariant = Color(0xFFA6B9CB),
 
-    surfaceContainerLowest = Color(0xFFD6E1EC),
-    surfaceContainerLow = Color(0xFFDEE8F2),
-    surfaceContainer = Color(0xFFE4ECF5),
-    surfaceContainerHigh = Color(0xFFCFDCE9),
-    surfaceContainerHighest = Color(0xFFC4D4E3),
+    surfaceContainerLowest = Color(0xFFC1CFDC),
+    surfaceContainerLow = Color(0xFFC9D6E2),
+    surfaceContainer = Color(0xFFD0DCE7),
+    surfaceContainerHigh = Color(0xFFBAC9D7),
+    surfaceContainerHighest = Color(0xFFAEBFCE),
 
     surfaceTint = Color(0xFF168FE3),
 

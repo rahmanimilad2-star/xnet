@@ -393,10 +393,43 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             Column(Modifier.widthIn(max = 540.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("XNET", color = MaterialTheme.colorScheme.onSurface, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 6.sp)
-                        Text(if (english) "PRIVATE NETWORK" else "شبکه خصوصی", color = muted(), fontSize = 10.sp, letterSpacing = 2.2.sp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(30.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = .82f))
+                                .border(1.dp, accent.copy(alpha = .28f), RoundedCornerShape(9.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.xnet_logo),
+                                contentDescription = null,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                "XNET",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 23.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 5.sp,
+                            )
+                            Text(
+                                if (english) "PRIVATE NETWORK" else "شبکه خصوصی",
+                                color = muted(),
+                                fontSize = 9.sp,
+                                letterSpacing = 2.sp,
+                            )
+                        }
                     }
+
                     StatusChip(look.label, english, onDark = true, stateColor = accent)
                 }
                 Spacer(Modifier.height(18.dp))
