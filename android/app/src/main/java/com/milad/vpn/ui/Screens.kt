@@ -511,13 +511,7 @@ private fun ConnectionOrb(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (busy) CircularProgressIndicator(Modifier.size(buttonSize * 0.21f), color = c1, strokeWidth = 3.dp)
                 else Icon(if (connected) Icons.Filled.VerifiedUser else Icons.Filled.PowerSettingsNew, null, tint = if (connected) MaterialTheme.colorScheme.onSurface else c1, modifier = Modifier.size(buttonSize * 0.25f))
-                Text(
-    if (busy) "SYNCING" else if (connected) "PROTECTED" else if (phase == Phase.DISCONNECTED) "CONNECT" else "RETRY",
-    color = Color.White,
-    fontSize = 10.sp,
-    fontWeight = FontWeight.ExtraBold,
-    letterSpacing = 1.4.sp,
-)
+                Text(if (busy) "SYNCING" else if (connected) "PROTECTED" else if (phase == Phase.DISCONNECTED) "CONNECT" else "RETRY", color = if (connected) MaterialTheme.colorScheme.onSurface else c1, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
             }
         }
     }
