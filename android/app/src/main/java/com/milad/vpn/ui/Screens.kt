@@ -357,6 +357,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
 }
 
 
+
 // ------------------------------------------------------------------------------------- home
 private data class PhaseLook(val label: String, val color: Color, val deep: Color)
 
@@ -394,14 +395,13 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HomeBackdrop(accent, if (vpn.phase == Phase.CONNECTED) 0.78f else 0.28f)
-        val viewportHeight = maxHeight
-        val short = viewportHeight < 650.dp
+        val short = maxHeight < 650.dp
         Column(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = viewportHeight), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = maxHeight), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(if (short) 12.dp else 22.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -961,14 +961,6 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
             }
         }
     }
-}
-
-@Composable
-private fun flagOf(country: String): String {
-    val code = country.trim().uppercase().takeIf { it.length == 2 && it.all(Char::isLetter) } ?: return "🌐"
-    return code.map { char ->
-        String(Character.toChars(0x1F1E6 + (char.code - 'A'.code)))
-    }.joinToString("")
 }
 
 @Composable
