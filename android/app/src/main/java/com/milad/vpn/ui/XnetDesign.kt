@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 /*
  * XNET Design System (UI only).
@@ -32,6 +33,14 @@ internal val Ok = Color(0xFF12B76A)
 internal val OkDeep = Color(0xFF0E9F6E)
 internal val Warn = Color(0xFFF59E0B)
 internal val Bad = Color(0xFFEF4444)
+
+// Shared visual constants used by the redesigned presentation layer.
+internal val XnetSurface = Color(0xFF08111F)
+internal val XnetSurfaceSecondary = Color(0xFF0A1424)
+internal val XnetBorder = Color(0xFF18365A)
+internal val XnetPrimaryText = Color(0xFFEAF3FF)
+internal val XnetMutedText = Color(0xFF8FA3C7)
+internal val XnetCardShape = RoundedCornerShape(20.dp)
 
 // ------------------------------------------------------------------------------------ schemes
 private val XnetDark = darkColorScheme(
@@ -119,6 +128,18 @@ private val Bokeh = listOf(
 internal fun HomeBackdrop(accent: Color, strength: Float) {
     val k = if (isDarkTheme()) 1f else 0.3f
     Canvas(Modifier.fillMaxSize()) {
+        val grid = Color(0xFF18365A).copy(alpha = 0.075f * k)
+        val step = 42.dp.toPx()
+        var x = 0f
+        while (x <= size.width) {
+            drawLine(grid, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+            x += step
+        }
+        var y = 0f
+        while (y <= size.height) {
+            drawLine(grid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+            y += step
+        }
         drawRect(
             Brush.radialGradient(
                 listOf(accent.copy(alpha = 0.30f * strength * k), Color.Transparent),

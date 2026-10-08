@@ -20,6 +20,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -128,8 +129,8 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
     var show by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    Box(Modifier.fillMaxSize()) {
-        HomeBackdrop(Cyan, 0.6f)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        HomeBackdrop(Cyan, 0.9f)
         Column(
             Modifier
                 .fillMaxSize()
@@ -139,31 +140,31 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                 .padding(horizontal = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(56.dp))
+            Spacer(Modifier.height(42.dp))
             Box(
                 Modifier
-                    .size(76.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, Cyan.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
+                    .size(92.dp)
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(BrandDeep.copy(alpha = .75f), XnetSurface)))
+                    .border(1.5.dp, Cyan.copy(alpha = 0.72f), CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(46.dp)) }
+            ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(54.dp)) }
             Spacer(Modifier.height(14.dp))
-            Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
+            Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 7.sp else 2.sp)
             Text(
-                if (english) "SECURE VPN" else "وی‌پی‌ان امن",
-                color = muted(), fontSize = 14.sp,
+                if (english) "PRIVATE NETWORK ACCESS" else "دسترسی به شبکه خصوصی",
+                color = muted(), fontSize = 11.sp, letterSpacing = if (english) 2.sp else 0.sp,
             )
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(26.dp))
 
             Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = glassBorder(),
+                shape = RoundedCornerShape(28.dp),
+                color = XnetSurface.copy(alpha = .96f),
+                border = BorderStroke(1.dp, XnetBorder),
                 modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(if (english) "Sign in" else "ورود به حساب", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(if (english) "Enter the network" else "ورود به شبکه", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                     Text(
                         if (english) "Use the account your provider gave you." else "با حسابی که مدیر برایتان ساخته وارد شوید.",
                         color = muted(), fontSize = 13.sp,
@@ -287,7 +288,7 @@ fun MainScaffold(
     }
 }
 
-/** Floating bottom navigation: filled icon on a soft pill when selected, outlined + muted otherwise. */
+/** Compact navigation rail with an active cyan signal, not a stock Material bar. */
 @Composable
 private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     val labels = if (english) listOf("Home", "Servers", "Account") else listOf("خانه", "سرورها", "حساب")
@@ -295,21 +296,17 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     // Keep the same stable icons in both states. The current project dependency set
     // does not expose the outlined Home/Public variants on GitHub Actions.
     val outlined = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f))
+    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
+        HorizontalDivider(color = XnetBorder.copy(alpha = .8f))
         Box(
             Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 18.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
-            Row(Modifier.height(68.dp).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(XnetSurface.copy(alpha = .96f)).border(1.dp, XnetBorder, RoundedCornerShape(22.dp))) {
+            Row(Modifier.height(64.dp).padding(horizontal = 7.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 labels.forEachIndexed { i, label ->
                     val sel = tab == i
                     val tint by animateColorAsState(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(220), label = "navTint")
@@ -320,17 +317,17 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .selectable(selected = sel, role = Role.Tab, onClick = { onSelect(i) }),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Box(
                             Modifier
-                                .size(width = 56.dp, height = 32.dp)
-                                .clip(RoundedCornerShape(50))
+                                .size(width = 62.dp, height = 29.dp)
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(pill)
-                                .border(1.dp, if (sel) tint.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(50)),
+                                .border(1.dp, if (sel) tint.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -340,7 +337,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                                 modifier = Modifier.size(if (sel) 24.dp else 21.dp),
                             )
                         }
-                        Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(1.dp))
                         Text(
                             label,
                             color = tint,
@@ -364,9 +361,9 @@ private data class PhaseLook(val label: String, val color: Color, val deep: Colo
 private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.phase == Phase.DISCONNECTED && vpn.isQuotaExceeded) {
     PhaseLook(if (english) "Data used up" else "حجم تمام شد", Bad, Color(0xFFB91C1C))
 } else if (vpn.isError) {
-    PhaseLook(if (english) "Connection failed" else "خطا در اتصال", Bad, Color(0xFFB91C1C))
+    PhaseLook(if (english) "Error" else "خطا", Bad, Color(0xFFB91C1C))
 } else when (vpn.phase) {
-    Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Cyan, CyanDeep)
+    Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Ok, OkDeep)
     Phase.CONNECTING -> PhaseLook(if (english) "Connecting…" else "در حال اتصال…", Warn, Color(0xFFEA580C))
     Phase.RECONNECTING -> PhaseLook(if (english) "Reconnecting…" else "در حال اتصال مجدد…", Warn, Color(0xFFEA580C))
     Phase.DISCONNECTED -> PhaseLook(if (english) "Disconnected" else "قطع", Steel, SteelDeep)
@@ -379,98 +376,73 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
     val connected = if (vpn.phase == Phase.CONNECTED) ui.configs.firstOrNull { it.id == vpn.configId } else null
     val shown = selected ?: connected
-    val serverName = shown?.name ?: if (ui.selectedConfigId < 0) (if (english) "Auto" else "خودکار") else (if (english) "Selected server" else "سرور انتخاب‌شده")
-    val serverSub = listOfNotNull(
-        shown?.country?.takeIf { it.isNotBlank() },
-        shown?.protocol?.uppercase()?.takeIf { it.isNotBlank() },
-    ).joinToString(" · ").ifBlank { if (english) "Automatic server selection" else "انتخاب خودکار سرور" }
+    val name = shown?.name ?: if (ui.selectedConfigId < 0) (if (english) "Auto select" else "انتخاب خودکار") else (if (english) "Selected server" else "سرور انتخاب‌شده")
+    val details = listOfNotNull(shown?.country?.takeIf { it.isNotBlank() }, shown?.protocol?.uppercase()?.takeIf { it.isNotBlank() }).joinToString(" · ")
     val hint = when (vpn.phase) {
-        Phase.DISCONNECTED -> when {
-            vpn.isQuotaExceeded || ui.blockCode == "QUOTA_EXCEEDED" -> if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA
-            vpn.isError -> if (english) "Tap to try again" else "برای تلاش دوباره لمس کنید"
-            else -> if (english) "Tap to connect securely" else "برای اتصال امن لمس کنید"
-        }
-        Phase.CONNECTING, Phase.RECONNECTING -> vpn.detail?.takeIf { !english } ?: if (english) "Please wait…" else "لطفاً صبر کنید…"
-        Phase.CONNECTED -> if (english) "Connected to $serverName" else "متصل به $serverName"
+        Phase.CONNECTED -> if (english) "Your traffic is protected" else "ترافیک شما محافظت می‌شود"
+        Phase.CONNECTING, Phase.RECONNECTING -> vpn.detail?.takeIf { !english } ?: if (english) "Negotiating secure tunnel" else "در حال برقراری تونل امن"
+        Phase.DISCONNECTED -> if (vpn.isError) (if (english) "Tap the orb to try again" else "برای تلاش دوباره گوی را لمس کنید") else if (english) "Tap the orb to connect" else "برای اتصال، گوی را لمس کنید"
     }
-    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        HomeBackdrop(accent, if (vpn.phase == Phase.CONNECTED) 0.78f else 0.28f)
-        val viewportHeight = this@BoxWithConstraints.maxHeight
-        val short = viewportHeight < 650.dp
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        HomeBackdrop(accent, if (vpn.phase == Phase.CONNECTED) .95f else .34f)
         Column(
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().heightIn(min = viewportHeight), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(if (short) 12.dp else 22.dp))
+            Column(Modifier.widthIn(max = 540.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
-                        Text(if (english) "SECURE VPN" else "وی‌پی‌ان امن", color = muted(), fontSize = 10.sp, letterSpacing = if (english) 3.sp else 0.sp)
+                        Text("XNET", color = MaterialTheme.colorScheme.onSurface, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 6.sp)
+                        Text(if (english) "PRIVATE NETWORK" else "شبکه خصوصی", color = muted(), fontSize = 10.sp, letterSpacing = 2.2.sp)
                     }
                     StatusChip(look.label, english, onDark = true)
                 }
-                ui.blockMessage?.let { Spacer(Modifier.height(10.dp)); Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
-                Spacer(Modifier.height(if (short) 12.dp else 26.dp))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ConnectButton(vpn.phase, look, onToggle, buttonSize = if (short) 210.dp else 264.dp)
-                    Spacer(Modifier.height(14.dp))
-                    Text(if (english) look.label.uppercase() else look.label, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 3.sp else 0.sp)
+                Spacer(Modifier.height(18.dp))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(XnetSurface.copy(alpha = .72f)).border(1.dp, accent.copy(alpha = .18f), RoundedCornerShape(24.dp)).padding(top = 20.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(if (english) "CONNECTION STATUS" else "وضعیت اتصال", color = muted(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text(if (english) look.label.uppercase() else look.label, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 2.3.sp else 0.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(hint, color = muted(), fontSize = 12.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(10.dp))
+                    ConnectionOrb(vpn.phase, look, onToggle, 250.dp)
                     if (vpn.phase == Phase.CONNECTED) {
                         var tick by remember { mutableIntStateOf(0) }
                         LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
-                        key(tick) { Text(Format.duration(vpn.connectedSince), color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                        key(tick) { Text(Format.duration(vpn.connectedSince), color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
                     }
-                    Spacer(Modifier.height(5.dp))
-                    Text(hint, color = muted(), fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
                 }
-                Spacer(Modifier.height(if (short) 18.dp else 28.dp))
-                ServerCard(flagOf(shown?.country ?: ""), serverName, serverSub, accent, english, onOpenServers)
-                Spacer(Modifier.height(14.dp))
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)).border(1.dp, MaterialTheme.colorScheme.outline), verticalAlignment = Alignment.CenterVertically) {
-                    HomeStat(if (english) "PING" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Modifier.weight(1f))
-                    VerticalDivider(Modifier.height(30.dp), color = MaterialTheme.colorScheme.outline)
-                    HomeStat(if (english) "PROTOCOL" else "پروتکل", shown?.protocol?.uppercase()?.takeIf { it.isNotBlank() } ?: "—", Modifier.weight(1f))
-                }
-                ui.account?.let { Spacer(Modifier.height(14.dp)); SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
                 Spacer(Modifier.height(18.dp))
+                HomeSectionLabel(if (english) "ROUTE" else "مسیر اتصال")
+                Spacer(Modifier.height(7.dp))
+                ServerSelector(flagOf(shown?.country ?: ""), name, details.ifBlank { if (english) "Automatic selection" else "انتخاب خودکار" }, accent, vpn.pingMs?.let { "${Format.num(it)} ms" }, vpn.phase == Phase.CONNECTED, onOpenServers)
+                ui.account?.let {
+                    Spacer(Modifier.height(16.dp))
+                    HomeSectionLabel(if (english) "PLAN" else "اشتراک")
+                    Spacer(Modifier.height(7.dp))
+                    SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
+                }
+                Spacer(Modifier.height(22.dp))
             }
         }
     }
 }
 
 @Composable
-private fun HomeStat(title: String, value: String, modifier: Modifier) {
-    Column(modifier.padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, color = muted(), fontSize = 10.sp, letterSpacing = 1.5.sp)
-        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
+private fun HomeSectionLabel(text: String) { Text(text, Modifier.fillMaxWidth(), color = muted(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp) }
 
 @Composable
-private fun ServerCard(flag: String, title: String, sub: String, accent: Color, english: Boolean, onClick: () -> Unit) {
+private fun ServerSelector(flag: String, title: String, sub: String, accent: Color, ping: String?, connected: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
-    Surface(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline), shadowElevation = 0.dp,
-    ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(accent.copy(alpha = 0.10f)).border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (english) "Change server" else "تغییر سرور", tint = muted(), modifier = Modifier.size(22.dp))
-        }
+    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = XnetSurface, border = BorderStroke(1.dp, accent.copy(alpha = .32f)), shadowElevation = 0.dp) {
+        Row(Modifier.padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .11f)).border(1.dp, accent.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 20.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) { ping?.let { Text(it, color = muted(), fontSize = 11.sp) }; if (connected) { Box(Modifier.size(6.dp).clip(CircleShape).background(Ok)); Text("LIVE", color = Ok, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) } } }; Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(19.dp)) }
     }
 }
 
 @Composable
-private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, buttonSize: Dp = 250.dp) {
+private fun ConnectionOrb(phase: Phase, look: PhaseLook, onClick: () -> Unit, buttonSize: Dp = 250.dp) {
     val context = LocalContext.current
     val c1 by animateColorAsState(look.color, tween(420), label = "buttonAccent")
     val c2 by animateColorAsState(look.deep, tween(420), label = "buttonDeep")
@@ -487,10 +459,10 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             val center = Offset(size.width / 2f, size.height / 2f)
             val outer = size.minDimension * 0.47f
             val inner = size.minDimension * 0.31f
-            drawCircle(Brush.radialGradient(listOf(c1.copy(alpha = if (connected) 0.20f else 0.07f), Color.Transparent), center, outer * 1.65f), outer * 1.65f, center)
-            drawCircle(c1.copy(alpha = 0.12f), outer * 1.22f, center, style = Stroke(1.5f))
-            drawCircle(c1.copy(alpha = if (connected) 0.50f else 0.24f), outer * 1.02f, center, style = Stroke(2f))
-            drawCircle(c1.copy(alpha = 0.16f), outer * 0.83f, center, style = Stroke(1f))
+            drawCircle(Brush.radialGradient(listOf(c1.copy(alpha = if (connected) 0.28f else 0.10f), Color.Transparent), center, outer * 1.75f), outer * 1.75f, center)
+            drawCircle(c1.copy(alpha = 0.10f), outer * 1.28f, center, style = Stroke(1.5f))
+            drawCircle(c1.copy(alpha = if (connected) 0.64f else 0.28f), outer * 1.06f, center, style = Stroke(2.5f))
+            drawCircle(c1.copy(alpha = 0.18f), outer * 0.88f, center, style = Stroke(1f))
             if (busy) {
                 drawArc(c1.copy(alpha = 0.9f), phaseSweep, 85f, false, Offset(center.x - outer, center.y - outer), androidx.compose.ui.geometry.Size(outer * 2f, outer * 2f), style = Stroke(4f, cap = StrokeCap.Round))
                 drawCircle(c1.copy(alpha = (1f - ripple) * 0.35f), inner + (outer - inner) * ripple, center, style = Stroke(2f))
@@ -498,13 +470,16 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
         }
         Box(
             Modifier.size(buttonSize * 0.62f).scale(pressScale).clip(CircleShape)
-                .background(Brush.radialGradient(listOf(c2.copy(alpha = if (connected) 0.85f else 0.55f), MaterialTheme.colorScheme.surface)))
-                .border(if (connected) 3.dp else 2.dp, c1.copy(alpha = if (connected) 0.95f else 0.65f), CircleShape)
+                .background(Brush.radialGradient(listOf(c2.copy(alpha = if (connected) 0.96f else 0.72f), XnetSurface)))
+                .border(if (connected) 3.dp else 2.dp, c1.copy(alpha = if (connected) 1f else 0.72f), CircleShape)
                 .clickable { pressed = true; vibrate(context, strong = true); onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            if (busy) CircularProgressIndicator(Modifier.size(buttonSize * 0.21f), color = c1, strokeWidth = 3.dp)
-            else Icon(if (connected) Icons.Filled.VerifiedUser else Icons.Filled.PowerSettingsNew, null, tint = if (connected) MaterialTheme.colorScheme.onSurface else c1, modifier = Modifier.size(buttonSize * 0.25f))
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (busy) CircularProgressIndicator(Modifier.size(buttonSize * 0.21f), color = c1, strokeWidth = 3.dp)
+                else Icon(if (connected) Icons.Filled.VerifiedUser else Icons.Filled.PowerSettingsNew, null, tint = if (connected) MaterialTheme.colorScheme.onSurface else c1, modifier = Modifier.size(buttonSize * 0.25f))
+                Text(if (busy) "SYNCING" else if (connected) "PROTECTED" else if (phase == Phase.DISCONNECTED) "CONNECT" else "RETRY", color = if (connected) MaterialTheme.colorScheme.onSurface else c1, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            }
         }
     }
 }
@@ -922,11 +897,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text(if (english) "SERVERS" else "سرورها", fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 4.sp else 0.sp)
-            Text(
-                if (english) "${Format.num(ui.configs.size)} locations available" else "${Format.num(ui.configs.size)} سرور در دسترس",
-                color = muted(), fontSize = 13.sp,
-            )
+            ServerDirectoryHeader(ui, english)
             Spacer(Modifier.height(6.dp))
         }
         item {
@@ -964,6 +935,30 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
     }
 }
 
+@Composable
+private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
+    val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(XnetSurface.copy(alpha = .92f)).border(1.dp, XnetBorder, RoundedCornerShape(24.dp)).padding(18.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 2.8.sp else 0.sp)
+                Text(if (english) "Choose where your tunnel exits" else "محل خروج تونل را انتخاب کنید", color = muted(), fontSize = 12.sp)
+            }
+            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Brand.copy(alpha = .12f)).border(1.dp, Brand.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Public, null, tint = Brand, modifier = Modifier.size(22.dp))
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
+            Spacer(Modifier.width(8.dp))
+            Text(if (english) "${Format.num(ui.configs.size)} routes online" else "${Format.num(ui.configs.size)} مسیر فعال", color = Ok, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            Text(selected?.country ?: if (english) "AUTO" else "خودکار", color = muted(), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+    }
+}
+
 private fun flagOf(country: String): String {
     val code = country.trim().uppercase()
         .takeIf { it.length == 2 && it.all(Char::isLetter) }
@@ -981,17 +976,18 @@ fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, conne
     val border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.85f)) else glassBorder(0.65f)
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else XnetSurface,
         border = border, shadowElevation = 0.dp,
     ) {
-        Row(Modifier.padding(horizontal = 15.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 15.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(primary.copy(alpha = 0.08f)).border(1.dp, primary.copy(alpha = if (selected) 0.7f else 0.22f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
                 if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = primary, modifier = Modifier.size(22.dp)) else Text(flag, fontSize = 21.sp)
             }
             Spacer(Modifier.width(13.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub.isNotBlank()) Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (selected && connectedLabel == null) Text(if (title == "Auto") (if (flag == "⚡") "FAILOVER ENABLED" else "") else "READY TO CONNECT", color = primary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             }
             if (connectedLabel != null) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1041,10 +1037,7 @@ fun AccountScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
-                Text(if (english) "ACCOUNT" else "حساب کاربری", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 4.sp else 0.sp)
-                Text(if (english) "Your XNET profile" else "پروفایل XNET شما", color = muted(), fontSize = 12.sp)
-            }
+            AccountScreenHeader(english)
         }
         if (acc != null) {
             item { AccountHero(acc, english) }
@@ -1141,6 +1134,19 @@ fun AccountScreen(
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(24.dp),
         )
+    }
+}
+
+@Composable
+private fun AccountScreenHeader(english: Boolean) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(if (english) "IDENTITY" else "هویت کاربر", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 3.2.sp else 0.sp)
+            Text(if (english) "Your secure XNET profile" else "پروفایل امن XNET شما", color = muted(), fontSize = 12.sp)
+        }
+        Box(Modifier.size(38.dp).clip(CircleShape).background(Cyan.copy(alpha = .10f)).border(1.dp, Cyan.copy(alpha = .4f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.VerifiedUser, null, tint = Cyan, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
