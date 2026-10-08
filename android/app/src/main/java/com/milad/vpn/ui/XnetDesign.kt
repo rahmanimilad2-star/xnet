@@ -124,7 +124,14 @@ internal fun xnetFieldColors() = androidx.compose.material3.OutlinedTextFieldDef
 )
 
 @Composable
-internal fun muted() = MaterialTheme.colorScheme.onSurfaceVariant
+internal fun muted(): Color {
+    val dark = isDarkTheme()
+    return if (dark) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        Color(0xFF40546B)
+    }
+}
 
 /** Theme-aware structural colors. Never reuse the dark palette in Light mode. */
 @Composable
