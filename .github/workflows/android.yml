@@ -44,23 +44,36 @@ jobs:
           fi
           ls -la app/libs
 
-      - name: Generate Gradle wrapper (if missing)
-        run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            gradle wrapper --gradle-version 8.14.3
-          fi
-          chmod +x gradlew
-
-      - name: Decode release keystore
+      - name: Validate and decode release keystore
         env:
           VPN_KEYSTORE_B64: ${{ secrets.VPN_KEYSTORE }}
+          VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
+          VPN_KEY_ALIAS: ${{ secrets.VPN_KEY_ALIAS }}
+          VPN_KEY_PASSWORD: ${{ secrets.VPN_KEY_PASSWORD }}
         run: |
-          echo "$VPN_KEYSTORE_B64" | base64 --decode > xnet-release.keystore
+          set -euo pipefail
+          for name in VPN_KEYSTORE_B64 VPN_KEYSTORE_PASSWORD VPN_KEY_ALIAS VPN_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required GitHub secret: $name"
+              exit 1
+            fi
+          done
+          if ! printf '%s' "$VPN_KEYSTORE_B64" | base64 --decode > xnet-release.keystore; then
+            echo "::error::VPN_KEYSTORE is not valid Base64"
+            exit 1
+          fi
+          if [ ! -s xnet-release.keystore ]; then
+            echo "::error::Decoded keystore is empty"
+            exit 1
+          fi
           chmod 600 xnet-release.keystore
-
+          if ! keytool -list -keystore xnet-release.keystore -storepass "$VPN_KEYSTORE_PASSWORD" -alias "$VPN_KEY_ALIAS" >/dev/null; then
+            echo "::error::Keystore password or key alias is invalid"
+            exit 1
+          fi
       - name: Build release APK
         env:
-          VPN_KEYSTORE: ../xnet-release.keystore
+          VPN_KEYSTORE: xnet-release.keystore
           VPN_KEYSTORE_PASSWORD: ${{ secrets.VPN_KEYSTORE_PASSWORD }}
           VPN_KEY_ALIAS: ${{ secrets.VPN_KEY_ALIAS }}
           VPN_KEY_PASSWORD: ${{ secrets.VPN_KEY_PASSWORD }}

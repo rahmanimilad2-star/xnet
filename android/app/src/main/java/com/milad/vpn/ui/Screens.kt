@@ -974,14 +974,6 @@ fun SubscriptionStrip(
             else "${Format.bytes(volume.remainingBytes)} باقی‌مانده از ${Format.bytes(volume.quotaBytes)}"
     }
 
-    val daysText = when (time) {
-        SubscriptionUsage.Time.NoLimit -> null
-        SubscriptionUsage.Time.Expired -> if (english) "Expired" else "منقضی شده"
-        is SubscriptionUsage.Time.DaysLeft ->
-            if (english) "⏳ ${time.days} days left"
-            else "⏳ ${Format.num(time.days)} روز باقی‌مانده"
-    }
-
     val daysColor = when (time) {
         SubscriptionUsage.Time.Expired -> Bad
         is SubscriptionUsage.Time.DaysLeft -> if (time.days <= 3) Bad else muted()
@@ -1003,7 +995,8 @@ fun SubscriptionStrip(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1011,12 +1004,10 @@ fun SubscriptionStrip(
             ) {
                 Box(
                     Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
-                            Brush.linearGradient(
-                                listOf(Brand, BrandDeep)
-                            )
+                            Brush.linearGradient(listOf(Brand, Cyan))
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1024,7 +1015,7 @@ fun SubscriptionStrip(
                         Icons.Filled.WorkspacePremium,
                         null,
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
 
@@ -1032,29 +1023,22 @@ fun SubscriptionStrip(
 
                 Column(Modifier.weight(1f)) {
                     Text(
-                        if (english) "Subscription usage" else "مصرف اشتراک",
-                        color = muted(),
-                        maxLines = 1,
-                    )
-
-                    Text(
-                        volumeTitle,
+                        if (english) "YOUR SUBSCRIPTION" else "اشتراک شما",
+                        color = Brand,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp,
+                        letterSpacing = 1.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
-
+                    Spacer(Modifier.height(3.dp))
                     Text(
-                        volumeSubtitle,
-                        fontSize = 11.sp,
-                        color = muted(),
+                        if (english) "Usage overview" else "وضعیت مصرف اشتراک",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-
-                Spacer(Modifier.width(8.dp))
 
                 StatusChip(acc.status, english)
 
@@ -1063,42 +1047,140 @@ fun SubscriptionStrip(
                     null,
                     tint = muted(),
                     modifier = Modifier
-                        .padding(start = 4.dp)
+                        .padding(start = 3.dp)
                         .size(20.dp),
                 )
             }
 
-            if (hasLimitedVolume) {
-                Spacer(Modifier.height(10.dp))
-
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(muted().copy(alpha = 0.18f))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(15.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        .copy(alpha = 0.72f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, Brand.copy(alpha = 0.28f)
+                    ),
                 ) {
-                    Box(
+                    Column(
                         Modifier
-                            .fillMaxWidth(usedFraction)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(
-                                if (usedFraction >= 0.9f) Bad else Brand
-                            ),
-                    )
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                    ) {
+                        Text(
+                            if (english) "DATA REMAINING" else "حجم باقی‌مانده",
+                            color = muted(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            volumeTitle,
+                            color = Cyan,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        Text(
+                            volumeSubtitle,
+                            color = muted(),
+                            fontSize = 10.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+
+                        if (hasLimitedVolume) {
+                            Spacer(Modifier.height(12.dp))
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(muted().copy(alpha = 0.18f))
+                            ) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth(usedFraction.coerceIn(0f, 1f))
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(
+                                            if (usedFraction >= 0.9f) Bad else Brand
+                                        ),
+                                )
+                            }
+                        }
+                    }
                 }
-            }
 
-            if (daysText != null) {
-                Spacer(Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(15.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        .copy(alpha = 0.72f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, Cyan.copy(alpha = 0.24f)
+                    ),
+                ) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                    ) {
+                        Text(
+                            if (english) "TIME REMAINING" else "زمان باقی‌مانده",
+                            color = muted(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
 
-                Text(
-                    daysText,
-                    fontSize = 12.sp,
-                    color = daysColor,
-                    maxLines = 1,
-                )
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            when (time) {
+                                SubscriptionUsage.Time.NoLimit ->
+                                    if (english) "∞" else "∞"
+                                SubscriptionUsage.Time.Expired -> "0"
+                                is SubscriptionUsage.Time.DaysLeft ->
+                                    Format.num(time.days)
+                            },
+                            color = daysColor,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        Text(
+                            when (time) {
+                                SubscriptionUsage.Time.NoLimit ->
+                                    if (english) "No expiry" else "بدون محدودیت زمانی"
+                                SubscriptionUsage.Time.Expired ->
+                                    if (english) "Expired" else "منقضی شده"
+                                is SubscriptionUsage.Time.DaysLeft ->
+                                    if (english) "days left" else "روز باقی‌مانده"
+                            },
+                            color = daysColor,
+                            fontSize = 11.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }
