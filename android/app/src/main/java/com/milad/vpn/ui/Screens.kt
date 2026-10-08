@@ -74,6 +74,11 @@ import kotlinx.coroutines.delay
 // ------------------------------------------------------------------------------------ tokens
 private val Brand = Color(0xFF4F5BFF)
 private val BrandDeep = Color(0xFF7B4DFF)
+private val Cyan = Color(0xFF22D3FF)
+private val CyanDeep = Color(0xFF1456FF)
+private val Steel = Color(0xFF8FA3D6)
+private val SteelDeep = Color(0xFF2A3A6B)
+private val HomeBg = Color(0xFF02050C)
 private val Ok = Color(0xFF12B76A)
 private val OkDeep = Color(0xFF0E9F6E)
 private val Warn = Color(0xFFF59E0B)
@@ -347,10 +352,55 @@ private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.pha
 } else if (vpn.isError) {
     PhaseLook(if (english) "Connection failed" else "خطا در اتصال", Bad, Color(0xFFB91C1C))
 } else when (vpn.phase) {
-    Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Ok, OkDeep)
+    Phase.CONNECTED -> PhaseLook(if (english) "Connected" else "متصل", Cyan, CyanDeep)
     Phase.CONNECTING -> PhaseLook(if (english) "Connecting…" else "در حال اتصال…", Warn, Color(0xFFEA580C))
     Phase.RECONNECTING -> PhaseLook(if (english) "Reconnecting…" else "در حال اتصال مجدد…", Warn, Color(0xFFEA580C))
-    Phase.DISCONNECTED -> PhaseLook(if (english) "Disconnected" else "قطع", Brand, BrandDeep)
+    Phase.DISCONNECTED -> PhaseLook(if (english) "Disconnected" else "قطع", Steel, SteelDeep)
+}
+
+private val HomeScheme = darkColorScheme(
+    primary = Cyan,
+    onPrimary = Color.White,
+    secondary = Color(0xFF3D7BFF),
+    background = HomeBg,
+    onBackground = Color(0xFFE8EEFF),
+    surface = Color(0xFF0A1226),
+    onSurface = Color(0xFFE8EEFF),
+    surfaceVariant = Color(0xFF111B33),
+    onSurfaceVariant = Color(0xFF8C9AC0),
+    outline = Color(0xFF22304F),
+    outlineVariant = Color(0xFF1A2640),
+    surfaceContainer = Color(0xFF0A1226),
+    surfaceContainerHigh = Color(0xFF111B33),
+)
+
+/** Soft bokeh dots (fractions of the canvas, so it scales to any screen). Purely decorative. */
+private val Bokeh = listOf(
+    floatArrayOf(0.12f, 0.10f, 0.05f, 0f), floatArrayOf(0.84f, 0.16f, 0.07f, 1f), floatArrayOf(0.30f, 0.30f, 0.035f, 1f),
+    floatArrayOf(0.92f, 0.42f, 0.05f, 0f), floatArrayOf(0.06f, 0.58f, 0.06f, 0f), floatArrayOf(0.78f, 0.74f, 0.06f, 1f),
+    floatArrayOf(0.20f, 0.86f, 0.05f, 0f), floatArrayOf(0.55f, 0.06f, 0.03f, 1f),
+)
+
+@Composable
+private fun HomeBackdrop(accent: Color, strength: Float) {
+    val t = rememberInfiniteTransition(label = "backdrop")
+    val breathe by t.animateFloat(0.85f, 1f, infiniteRepeatable(tween(3200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breathe")
+    Canvas(Modifier.fillMaxSize()) {
+        drawRect(
+            Brush.radialGradient(
+                listOf(accent.copy(alpha = 0.30f * strength * breathe), Color.Transparent),
+                center = Offset(size.width / 2f, size.height * 0.34f), radius = size.width * 0.95f,
+            )
+        )
+        Bokeh.forEach { d ->
+            val c = if (d[3] > 0.5f) Cyan else Color(0xFF2F5BFF)
+            drawCircle(
+                Brush.radialGradient(listOf(c.copy(alpha = 0.16f + 0.10f * strength), Color.Transparent),
+                    center = Offset(size.width * d[0], size.height * d[1]), radius = size.width * d[2] * 2f),
+                radius = size.width * d[2] * 2f, center = Offset(size.width * d[0], size.height * d[1]),
+            )
+        }
+    }
 }
 
 @Composable
@@ -377,122 +427,112 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             ?: if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
         Phase.CONNECTED -> if (english) "Your connection is secured" else "اتصال شما امن است"
     }
+    val acc = ui.account?.takeIf { it.usageKnown }
 
-    // xnet-ui-polish-v1: background reaches behind the status bar; content stays inside safe area.
-    val glow by animateColorAsState(look.color.copy(alpha = 0.20f), tween(700), label = "bgGlow")
-    BoxWithConstraints(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(glow, Color.Transparent), endY = 1400f))
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        val viewport = maxHeight
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            // Fills at least the screen: header top, connect button centred, details anchored at the bottom.
+    MaterialTheme(colorScheme = HomeScheme) {
+        BoxWithConstraints(Modifier.fillMaxSize().background(HomeBg)) {
+            val viewport = maxHeight
+            HomeBackdrop(color, if (vpn.phase == Phase.CONNECTED) 1f else if (vpn.phase == Phase.DISCONNECTED) 0.35f else 0.7f)
             Column(
-                Modifier
-                    .widthIn(max = 560.dp)
-                    .fillMaxWidth()
-                    .heightIn(min = viewport)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier.size(30.dp).clip(RoundedCornerShape(10.dp))
-                                        .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
-                                    contentAlignment = Alignment.Center,
-                                ) { Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(17.dp)) }
-                                Spacer(Modifier.width(9.dp))
-                                Text(APP_TITLE, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp)
-                            }
-                            ui.account?.let { Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                Column(
+                    Modifier.widthIn(max = 560.dp).fillMaxWidth().heightIn(min = viewport)
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    // header: brand + real account name
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(painterResource(R.drawable.xnet_logo), contentDescription = null, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(APP_TITLE.uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp, color = Color(0xFFE8EEFF))
                         }
-                        StatusPill(look.label, color, pulsing = vpn.phase == Phase.CONNECTING || vpn.phase == Phase.RECONNECTING)
-                    }
-                    ui.blockMessage?.let { Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
-                }
-
-                val buttonSize = when {
-
-                    viewport < 620.dp -> 190.dp
-
-                    viewport < 720.dp -> 210.dp
-
-                    else -> 230.dp
-
-                }
-
-                Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-
-                    ConnectButton(vpn.phase, look, onToggle, buttonSize = buttonSize)
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(look.label, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-
-                    Spacer(Modifier.height(2.dp))
-
-                    Text(hint, color = muted(), fontSize = 12.5.sp, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 17.sp)
-
-                }
-
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ServerCard(flagOf(country), serverName, serverSub, color, english, onOpenServers)
-                    AnimatedVisibility(visible = vpn.phase == Phase.CONNECTED, enter = fadeIn(), exit = fadeOut()) {
-                        Surface(
-                            shape = HomeCardShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                var tick by remember { mutableIntStateOf(0) }
-                                LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
-                                key(tick) {
-                                    StatCard(if (english) "Session" else "مدت اتصال", Format.duration(vpn.connectedSince), Icons.Filled.Timer, BrandDeep, Modifier.weight(1f))
-                                }
-                                VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                                StatCard(if (english) "Ping" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Icons.Filled.Speed, Warn, Modifier.weight(1f))
-                            }
+                        ui.account?.let {
+                            Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        ui.blockMessage?.let { Banner(if (ui.blockCode == "QUOTA_EXCEEDED") (if (english) VpnStatus.QUOTA_MESSAGE_EN else VpnStatus.QUOTA_MESSAGE_FA) else it, Bad) }
                     }
-                    ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
+
+                    val buttonSize = when {
+                        viewport < 620.dp -> 210.dp
+                        viewport < 720.dp -> 240.dp
+                        else -> 280.dp
+                    }
+                    Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        ConnectButton(vpn.phase, look, onToggle, buttonSize = buttonSize)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            if (english) look.label.uppercase() else look.label,
+                            color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = if (english) 4.sp else 0.sp, textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        if (vpn.phase == Phase.CONNECTED) {
+                            var tick by remember { mutableIntStateOf(0) }
+                            LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
+                            key(tick) {
+                                Text(Format.duration(vpn.connectedSince), color = Color(0xFFE8EEFF), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                            }
+                            Spacer(Modifier.height(2.dp))
+                        }
+                        Text(hint, color = muted(), fontSize = 12.5.sp, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 17.sp)
+                    }
+
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ServerCard(flagOf(country), serverName, serverSub, color, english, onOpenServers)
+                        // real values only: live ping from the VPN state, traffic totals from the account (— when unknown)
+                        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            HomeStat(if (english) "PING" else "پینگ", vpn.pingMs?.let { "${Format.num(it)} ms" } ?: "—", Modifier.weight(1f))
+                            VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                            HomeStat(if (english) "DOWNLOAD" else "دانلود", acc?.let { Format.bytes(it.downloadBytes) } ?: "—", Modifier.weight(1f))
+                            VerticalDivider(Modifier.fillMaxHeight().padding(vertical = 2.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                            HomeStat(if (english) "UPLOAD" else "آپلود", acc?.let { Format.bytes(it.uploadBytes) } ?: "—", Modifier.weight(1f))
+                        }
+                        ui.account?.let { SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount) }
+                    }
                 }
             }
         }
     }
 }
 
-/** Current server (real config data). Tap -> Servers tab. */
+@Composable
+private fun HomeStat(title: String, value: String, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(title, fontSize = 10.sp, color = muted(), letterSpacing = 1.5.sp, maxLines = 1)
+        Spacer(Modifier.height(3.dp))
+        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFFE8EEFF), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Current server (real config data). Tap -> Servers tab. Dark glass card with a thin glowing border. */
 @Composable
 private fun ServerCard(flag: String, title: String, sub: String, accent: Color, english: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
     Surface(
         shape = HomeCardShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
+        color = Color(0xFF0A1226).copy(alpha = 0.85f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.55f), Color(0xFF2F5BFF).copy(alpha = 0.25f)))),
         modifier = Modifier.fillMaxWidth().clip(HomeCardShape).clickable { vibrate(context); onClick() },
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                Modifier.size(40.dp).clip(CircleShape).border(1.dp, accent.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { Text(flag, fontSize = 19.sp) }
-            Spacer(Modifier.width(10.dp))
+            ) {
+                if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(22.dp))
+                else Text(flag, fontSize = 20.sp)
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(if (english) "Server" else "سرور", fontSize = 11.sp, color = muted(), lineHeight = 14.sp)
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub.isNotBlank()) Text(sub, fontSize = 12.sp, color = muted(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            Text(if (english) "Change" else "تغییر", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (english) "Change server" else "تغییر سرور", tint = accent, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -594,42 +634,54 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
     val c1 by animateColorAsState(look.color, tween(500), label = "c1")
     val c2 by animateColorAsState(look.deep, tween(500), label = "c2")
     val busy = phase == Phase.CONNECTING || phase == Phase.RECONNECTING
+    val connected = phase == Phase.CONNECTED
+    val glowLevel by animateFloatAsState(if (connected) 1f else if (busy) 0.6f else 0.2f, tween(600), label = "glowLevel")
     val t = rememberInfiniteTransition(label = "rings")
-    val ring by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "ring")
+    val ring by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "ring")
+    val pulse by t.animateFloat(0.75f, 1f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse")
     val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "spin")
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, tween(120, easing = FastOutSlowInEasing), label = "press")
     LaunchedEffect(pressed) { if (pressed) { delay(140); pressed = false } }
 
     Box(Modifier.size(buttonSize), contentAlignment = Alignment.Center) {
-        // ambient rings: expanding while connected/connecting
         Canvas(Modifier.fillMaxSize()) {
-            val r0 = size.minDimension / 2f * 0.62f
+            val half = size.minDimension / 2f
+            val core = half * 0.62f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            // halo
+            drawCircle(
+                Brush.radialGradient(listOf(c1.copy(alpha = 0.55f * glowLevel * pulse), Color.Transparent), center = center, radius = half),
+                radius = half, center = center,
+            )
+            // thin static outer rings
+            drawCircle(c1.copy(alpha = 0.10f + 0.18f * glowLevel), radius = half * 0.92f, style = Stroke(width = 1.5f))
+            drawCircle(c1.copy(alpha = 0.08f + 0.14f * glowLevel), radius = half * 0.78f, style = Stroke(width = 1.5f))
+            // expanding ripple while active
             if (phase != Phase.DISCONNECTED) {
                 for (i in 0..1) {
                     val p = (ring + i * 0.5f) % 1f
-                    drawCircle(c1.copy(alpha = (1f - p) * 0.28f), radius = r0 + (size.minDimension / 2f - r0) * p)
+                    drawCircle(c1.copy(alpha = (1f - p) * 0.35f), radius = core + (half - core) * p, style = Stroke(width = 2f))
                 }
-            } else {
-                drawCircle(c1.copy(alpha = 0.10f), radius = size.minDimension / 2f * 0.86f)
             }
-            drawCircle(c1.copy(alpha = 0.16f), radius = size.minDimension / 2f * 0.74f)
             if (busy) {
                 drawArc(
                     color = Color.White.copy(alpha = 0.9f), startAngle = spin, sweepAngle = 80f, useCenter = false,
-                    topLeft = Offset(size.width / 2f - r0 + 6f, size.height / 2f - r0 + 6f),
-                    size = androidx.compose.ui.geometry.Size((r0 - 6f) * 2f, (r0 - 6f) * 2f),
+                    topLeft = Offset(center.x - core + 6f, center.y - core + 6f),
+                    size = androidx.compose.ui.geometry.Size((core - 6f) * 2f, (core - 6f) * 2f),
                     style = Stroke(width = 8f, cap = StrokeCap.Round),
                 )
             }
         }
+        val face = if (connected) Brush.radialGradient(listOf(c2.copy(alpha = 0.95f), Color(0xFF061233)))
+        else Brush.radialGradient(listOf(c2.copy(alpha = 0.55f), Color(0xFF070D1F)))
         Box(
             Modifier
                 .size((buttonSize.value * 0.62f).dp)
                 .scale(scale)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(c1, c2)))
-                .border(4.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                .background(face)
+                .border(if (connected) 3.dp else 2.dp, c1.copy(alpha = if (connected) 0.95f else 0.55f), CircleShape)
                 .clickable {
                     pressed = true
                     vibrate(context, strong = true)
@@ -638,9 +690,9 @@ private fun ConnectButton(phase: Phase, look: PhaseLook, onClick: () -> Unit, bu
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                Icons.Filled.PowerSettingsNew,
+                if (connected) Icons.Filled.VerifiedUser else Icons.Filled.PowerSettingsNew,
                 contentDescription = if (phase == Phase.DISCONNECTED) "Connect" else "Disconnect",
-                tint = Color.White, modifier = Modifier.size((buttonSize.value * 0.26f).dp),
+                tint = if (connected) Color.White else c1, modifier = Modifier.size((buttonSize.value * 0.26f).dp),
             )
         }
     }
