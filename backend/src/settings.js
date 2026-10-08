@@ -16,6 +16,7 @@ const DEFAULTS = Object.freeze({
   default_quota_gb: 0,
   default_subscription_days: 0,
   sync_enabled: true,
+  support_telegram: '@Xnetservice2',
 });
 
 const BOOLEAN_KEYS = new Set([
@@ -103,6 +104,13 @@ function validate(key, value) {
       throw new Error('public_url must be a valid http/https URL');
     }
     return s.replace(/\/+$/, '');
+  }
+
+  if (key === 'support_telegram') {
+    const s = String(value ?? '').trim();
+    if (s.length > 128) throw new Error('support_telegram is too long');
+    if (!s) throw new Error('support_telegram cannot be empty');
+    return s.startsWith('@') ? s : `@${s}`;
   }
 
   throw new Error(`Unsupported setting: ${key}`);

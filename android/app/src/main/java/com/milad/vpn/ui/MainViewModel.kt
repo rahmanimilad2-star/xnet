@@ -26,6 +26,7 @@ data class UiState(
     val account: Account? = null,
     val configs: List<VpnConfig> = Repository.session.loadConfigs()?.configs.orEmpty(),
     val subscriptionUsage: List<com.milad.vpn.data.SubscriptionItemUsage> = emptyList(),
+    val supportTelegram: String = "@Xnetservice2",
     val selectedConfigId: Long = Repository.session.selectedConfigId,
     /** message for the subscription/config problem (quota, expiry, no config…) */
     val blockMessage: String? = null,
@@ -104,6 +105,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 account = acc,
                 configs = bundle.configs,
                 subscriptionUsage = bundle.subscriptionUsage,
+                supportTelegram = bundle.supportTelegram,
                 blockMessage = null,
                 blockCode = null,
                 info = null,

@@ -220,7 +220,7 @@ r.get('/api/v1/configs', requireUser, (ctx) => {
   });
   if (!list.length) throw new HttpError(404, 'NO_CONFIG', STATUS_MESSAGES.NO_CONFIG, { account });
   const version = list.map((c) => `${c.id}:${c.updated_at}`).join(',');
-  return { account, configs: list, version: require('node:crypto').createHash('sha1').update(version).digest('hex'), sync_after_seconds: CONFIG_SYNC_SECONDS, subscription_usage: userSubs.usageFor(ctx.user.id) };
+  return { account, configs: list, version: require('node:crypto').createHash('sha1').update(version).digest('hex'), sync_after_seconds: CONFIG_SYNC_SECONDS, subscription_usage: userSubs.usageFor(ctx.user.id), support_telegram: settings.get('support_telegram') };
 });
 
 r.post('/api/v1/events', requireUser, (ctx) => {
@@ -274,6 +274,7 @@ r.put('/api/admin/settings', requireAdmin, (ctx) => {
     'default_quota_gb',
     'default_subscription_days',
     'sync_enabled',
+    'support_telegram',
   ];
 
   const values = {};

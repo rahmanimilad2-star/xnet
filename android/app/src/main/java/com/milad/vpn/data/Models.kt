@@ -139,7 +139,7 @@ data class ConfigBundle(
     val version: String,
     val syncAfterSeconds: Int,
     val subscriptionUsage: List<SubscriptionItemUsage> = emptyList(),
+    val supportTelegram: String = "@Xnetservice2",
 )
-
 /** Server-side error with a machine readable [code] (e.g. QUOTA_EXCEEDED, NO_CONFIG, UNAUTHORIZED). */
 class ApiException(val httpStatus: Int, val code: String, override val message: String, val account: Account? = null) : Exception(message)

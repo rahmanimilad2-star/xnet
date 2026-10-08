@@ -85,7 +85,6 @@ private val DarkSurface = Color(0xFF151821)
 private val DarkSurface2 = Color(0xFF1D212D)
 
 private const val DEVELOPER_NAME = "M.R"
-private const val SUPPORT_TELEGRAM = "@rahmani208"
 private const val APP_TITLE = "Xnet"
 
 private val CardShape = RoundedCornerShape(20.dp)
@@ -330,6 +329,7 @@ fun MainScaffold(
                 1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null)
                 else -> AccountScreen(
                     acc = ui.account, english = english, darkMode = darkMode,
+                    supportTelegram = ui.supportTelegram,
                     password = remember(ui.account?.username) { com.milad.vpn.data.Repository.session.password },
                     onLanguageChange = onLanguageChange, onDarkModeChange = onDarkModeChange,
                     onRefresh = vm::refreshAccountNow, onLogout = vm::logout,
@@ -1143,6 +1143,7 @@ fun AccountScreen(
     onDarkModeChange: (Boolean) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    supportTelegram: String = "@Xnetservice2",
     password: String? = null,
 ) {
     var confirm by remember { mutableStateOf(false) }
@@ -1200,7 +1201,7 @@ fun AccountScreen(
 
         item {
             AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
-            SupportCard(english)
+            SupportCard(english, supportTelegram)
         }
 
         item {
@@ -1379,12 +1380,15 @@ private fun AccountActionRow(
 }
 
 @Composable
-private fun SupportCard(english: Boolean) {
+private fun SupportCard(english: Boolean, supportTelegram: String) {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { uriHandler.openUri("https://t.me/rahmani208") },
+            .clickable {
+                val username = supportTelegram.trim().removePrefix("@")
+                if (username.isNotBlank()) uriHandler.openUri("https://t.me/$username")
+            },
         shape = CardShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         border = androidx.compose.foundation.BorderStroke(
@@ -1413,7 +1417,7 @@ private fun SupportCard(english: Boolean) {
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    SUPPORT_TELEGRAM,
+                    supportTelegram.trim().ifBlank { "@Xnetservice2" },
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,

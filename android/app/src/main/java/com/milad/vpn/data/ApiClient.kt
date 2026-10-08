@@ -106,6 +106,7 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
             version = j.optString("version"),
             syncAfterSeconds = j.optInt("sync_after_seconds", 300),
             subscriptionUsage = subscriptionUsage,
+            supportTelegram = j.optString("support_telegram", "@Xnetservice2"),
         )
     }
 
