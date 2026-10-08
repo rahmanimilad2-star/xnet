@@ -287,6 +287,76 @@ fun MainScaffold(
     }
 }
 
+/** Floating bottom navigation: filled icon on a soft pill when selected, outlined + muted otherwise. */
+@Composable
+private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
+    val labels = if (english) listOf("Home", "Servers", "Account") else listOf("خانه", "سرورها", "حساب")
+    val filled = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
+    // Keep the same stable icons in both states. The current project dependency set
+    // does not expose the outlined Home/Public variants on GitHub Actions.
+    val outlined = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
+            Row(Modifier.height(68.dp).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                labels.forEachIndexed { i, label ->
+                    val sel = tab == i
+                    val tint by animateColorAsState(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(220), label = "navTint")
+                    val pill by animateColorAsState(
+                        if (sel) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent, tween(220), label = "navPill",
+                    )
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(18.dp))
+                            .selectable(selected = sel, role = Role.Tab, onClick = { onSelect(i) }),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Box(
+                            Modifier
+                                .size(width = 56.dp, height = 32.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(pill)
+                                .border(1.dp, if (sel) tint.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(50)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (sel) filled[i] else outlined[i],
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(if (sel) 24.dp else 21.dp),
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            label,
+                            color = tint,
+                            fontSize = 11.sp,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+          }
+        }
+    }
+}
+
+
 // ------------------------------------------------------------------------------------- home
 private data class PhaseLook(val label: String, val color: Color, val deep: Color)
 
