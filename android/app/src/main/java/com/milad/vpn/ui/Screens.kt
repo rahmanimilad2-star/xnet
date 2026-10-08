@@ -893,6 +893,13 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
 }
 
 @Composable
+private fun flagOf(country: String): String {
+    val code = country.trim().uppercase().takeIf { it.length == 2 && it.all(Char::isLetter) } ?: return "🌐"
+    return code.map { char ->
+        String(Character.toChars(0x1F1E6 + (char.code - 'A'.code)))
+    }.joinToString("")
+}
+
 fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, pingText: String? = null, onClick: () -> Unit) {
     val context = LocalContext.current
     val primary = MaterialTheme.colorScheme.primary
