@@ -20,8 +20,8 @@ android {
         applicationId = "com.milad.vpn"
         minSdk = 26
         targetSdk = 34
-        versionCode = 22
-        versionName = "2.1.0"
+        versionCode = 21
+        versionName = "2.0.9"
         buildConfigField("String", "API_BASE_URL", "\"${apiBase.trimEnd('/')}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
