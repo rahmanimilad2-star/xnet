@@ -151,7 +151,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
             Spacer(Modifier.height(14.dp))
             Text(APP_TITLE.uppercase(), color = MaterialTheme.colorScheme.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp)
             Text(
-                if (english) "Fast · Private · Secure" else "سریع · خصوصی · امن",
+                if (english) "SECURE VPN" else "وی‌پی‌ان امن",
                 color = muted(), fontSize = 14.sp,
             )
             Spacer(Modifier.height(30.dp))
@@ -172,7 +172,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                         value = user, onValueChange = { user = it },
                         label = { Text(if (english) "Username" else "نام کاربری") },
                         leadingIcon = { Icon(Icons.Filled.Person, null) },
-                        singleLine = true, shape = RoundedCornerShape(14.dp),
+                        singleLine = true, shape = RoundedCornerShape(14.dp), colors = xnetFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Next),
                     )
@@ -180,7 +180,7 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
                         value = pass, onValueChange = { pass = it },
                         label = { Text(if (english) "Password" else "رمز عبور") },
                         leadingIcon = { Icon(Icons.Filled.Lock, null) },
-                        singleLine = true, shape = RoundedCornerShape(14.dp),
+                        singleLine = true, shape = RoundedCornerShape(14.dp), colors = xnetFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
@@ -218,12 +218,12 @@ private fun GradientButton(text: String, loading: Boolean = false, onClick: () -
             .fillMaxWidth()
             .height(52.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Brand, BrandDeep)))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = if (loading) 0.6f else 1f))
             .clickable(enabled = !loading, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-        else Text(text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+        else Text(text, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
     }
 }
 
@@ -274,7 +274,7 @@ fun MainScaffold(
             if (tab != 0) HomeBackdrop(Cyan, 0.4f)
             when (tab) {
                 0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
-                1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null)
+                1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null, pingMs = vpn.pingMs)
                 else -> AccountScreen(
                     acc = ui.account, english = english, darkMode = darkMode,
                     supportTelegram = ui.supportTelegram,
@@ -322,8 +322,8 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
             else if (english) "Tap to connect securely" else "برای اتصال امن، دکمه را لمس کنید"
         // real step from the connection owner (refreshing / measuring ping / connecting to X / waiting for internet)
         Phase.CONNECTING, Phase.RECONNECTING -> vpn.detail?.takeIf { !english }
-            ?: if (english) "Establishing secure tunnel…" else "در حال برقراری تونل امن…"
-        Phase.CONNECTED -> if (english) "Your connection is secured" else "اتصال شما امن است"
+            ?: if (english) "Please wait…" else "لطفاً صبر کنید…"
+        Phase.CONNECTED -> if (english) "Connected to $serverName" else "متصل به $serverName"
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
             val viewport = maxHeight
@@ -345,6 +345,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                             Spacer(Modifier.width(10.dp))
                             Text(APP_TITLE.uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 6.sp else 2.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
+                        Text(if (english) "SECURE VPN" else "وی‌پی‌ان امن", color = muted(), fontSize = 10.sp, letterSpacing = if (english) 4.sp else 0.sp)
                         ui.account?.let {
                             Text(if (english) "Hi, ${it.username}" else "سلام ${it.username}", color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -406,25 +407,22 @@ private fun ServerCard(flag: String, title: String, sub: String, accent: Color, 
     val context = LocalContext.current
     Surface(
         shape = HomeCardShape,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(accent.copy(alpha = 0.55f), BrandDeep.copy(alpha = 0.25f)))),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth().clip(HomeCardShape).clickable { vibrate(context); onClick() },
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(40.dp).clip(CircleShape).border(1.dp, accent.copy(alpha = 0.5f), CircleShape),
+                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Cyan.copy(alpha = 0.08f)).border(1.dp, Cyan.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
-            ) {
-                if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(22.dp))
-                else Text(flag, fontSize = 20.sp)
-            }
+            ) { Icon(Icons.Filled.Language, null, tint = Cyan, modifier = Modifier.size(22.dp)) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (sub.isNotBlank()) Text(sub, fontSize = 12.sp, color = muted(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (english) "Change server" else "تغییر سرور", tint = accent, modifier = Modifier.size(22.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, if (english) "Change server" else "تغییر سرور", tint = muted(), modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -437,21 +435,20 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
     // Keep the same stable icons in both states. The current project dependency set
     // does not expose the outlined Home/Public variants on GitHub Actions.
     val outlined = listOf(Icons.Filled.Home, Icons.Filled.Public, Icons.Filled.Person)
-    Box(
+    Column(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        Surface(
-            modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)),
-            shadowElevation = 0.dp,
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
         ) {
+          Box(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
             Row(Modifier.height(68.dp).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 labels.forEachIndexed { i, label ->
                     val sel = tab == i
@@ -494,6 +491,7 @@ private fun XnetBottomBar(tab: Int, english: Boolean, onSelect: (Int) -> Unit) {
                     }
                 }
             }
+          }
         }
     }
 }
@@ -733,19 +731,19 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
         // header: identity + status
         Row(
             Modifier.fillMaxWidth()
-                .background(Brush.linearGradient(listOf(Brand, BrandDeep)))
+                .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), Color.Transparent)))
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(46.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
-                Text(acc.username.take(1).uppercase(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
+                Text(acc.username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(if (english) "Subscription details" else "مشخصات اشتراک", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(statusText(acc.status, english), color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                Text(if (english) "Subscription details" else "مشخصات اشتراک", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(statusText(acc.status, english), color = muted(), fontSize = 12.sp)
             }
-            StatusChip(acc.status, english, onDark = true)
+            StatusChip(acc.status, english)
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
             DetailRow(Icons.Filled.Person, if (english) "User ID" else "شناسه کاربری", acc.username, ltr = true) {
@@ -997,7 +995,7 @@ fun Banner(text: String, color: Color) {
 
 // ---------------------------------------------------------------------------------- servers
 @Composable
-fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null) {
+fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null, pingMs: Long? = null) {
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
@@ -1026,6 +1024,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
                 sub = listOf(c.country, c.protocol.uppercase()).filter { it.isNotBlank() }.joinToString(" · "),
                 selected = ui.selectedConfigId == c.id,
                 connectedLabel = if (connectedId == c.id) (if (english) "Connected" else "متصل") else null,
+                pingText = if (connectedId == c.id) pingMs?.let { "${Format.num(it)} ms" } else null,
             ) { onSelect(c.id) }
         }
         if (ui.configs.isEmpty()) {
@@ -1046,7 +1045,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
 }
 
 @Composable
-fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, onClick: () -> Unit) {
+fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, pingText: String? = null, onClick: () -> Unit) {
     val context = LocalContext.current
     val primary = MaterialTheme.colorScheme.primary
     Card(
@@ -1068,14 +1067,19 @@ fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, conne
                 if (sub.isNotBlank()) Text(sub, fontSize = 12.sp, color = muted(), maxLines = 2)
             }
             if (connectedLabel != null) {
-                Surface(color = Ok.copy(alpha = 0.14f), shape = RoundedCornerShape(50)) {
-                    Text(connectedLabel, color = Ok, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
+                        Spacer(Modifier.width(5.dp))
+                        Text(connectedLabel, color = Ok, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (pingText != null) Text(pingText, color = muted(), fontSize = 12.sp)
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
             }
             Icon(
                 if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null,
-                tint = if (selected) primary else muted(),
+                tint = if (selected) primary else muted().copy(alpha = 0.6f), modifier = Modifier.size(22.dp),
             )
         }
     }
@@ -1130,7 +1134,13 @@ fun AccountScreen(
             AccountSectionTitle(if (english) "Preferences" else "تنظیمات", english)
             AccountSettingsCard {
                 SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک", subtitle = if (english) "Premium dark interface" else "ظاهر تیره و حرفه‌ای") {
-                    Switch(checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) })
+                    Switch(
+                        checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = muted(), uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant, uncheckedBorderColor = MaterialTheme.colorScheme.outline,
+                        ),
+                    )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(icon = Icons.Filled.Translate, title = if (english) "Language" else "زبان", subtitle = if (english) "App language and direction" else "زبان و جهت نمایش برنامه") {
@@ -1231,12 +1241,13 @@ private fun AccountHero(acc: Account, english: Boolean) {
                 Modifier
                     .size(58.dp)
                     .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     acc.username.take(1).uppercase(),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 25.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )

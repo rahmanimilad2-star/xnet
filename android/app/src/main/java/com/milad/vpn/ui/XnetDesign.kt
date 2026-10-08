@@ -35,25 +35,25 @@ internal val Bad = Color(0xFFEF4444)
 
 // ------------------------------------------------------------------------------------ schemes
 private val XnetDark = darkColorScheme(
-    primary = Color(0xFF22B8FF),
-    onPrimary = Color(0xFF021018),
+    primary = Color(0xFF1FA8FF),
+    onPrimary = Color(0xFF02101C),
     secondary = BrandDeep,
     background = Color(0xFF02050C),
-    onBackground = Color(0xFFE8EEFF),
-    surface = Color(0xFF0A1226),
-    onSurface = Color(0xFFE8EEFF),
-    surfaceVariant = Color(0xFF111B33),
-    onSurfaceVariant = Color(0xFF8C9AC0),
-    outline = Color(0xFF22304F),
-    outlineVariant = Color(0xFF1A2640),
+    onBackground = Color(0xFFEAF3FF),
+    surface = Color(0xFF08111F),
+    onSurface = Color(0xFFEAF3FF),
+    surfaceVariant = Color(0xFF0A1424),
+    onSurfaceVariant = Color(0xFF8FA3C7),
+    outline = Color(0xFF18365A),
+    outlineVariant = Color(0xFF122A47),
     surfaceContainerLowest = Color(0xFF02050C),
-    surfaceContainerLow = Color(0xFF070D1C),
-    surfaceContainer = Color(0xFF0A1226),
-    surfaceContainerHigh = Color(0xFF0E1830),
-    surfaceContainerHighest = Color(0xFF111B33),
-    surfaceTint = Color(0xFF22B8FF),
-    inverseSurface = Color(0xFF111B33),
-    inverseOnSurface = Color(0xFFE8EEFF),
+    surfaceContainerLow = Color(0xFF06101D),
+    surfaceContainer = Color(0xFF08111F),
+    surfaceContainerHigh = Color(0xFF0A1424),
+    surfaceContainerHighest = Color(0xFF0D192C),
+    surfaceTint = Color(0xFF1FA8FF),
+    inverseSurface = Color(0xFF0D192C),
+    inverseOnSurface = Color(0xFFEAF3FF),
     error = Bad,
 )
 
@@ -81,6 +81,18 @@ fun AppTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
     }
 }
+
+/** Dark input containers with a thin blue outline. */
+@Composable
+internal fun xnetFieldColors() = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+)
 
 @Composable
 internal fun muted() = MaterialTheme.colorScheme.onSurfaceVariant
