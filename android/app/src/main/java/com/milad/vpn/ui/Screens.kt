@@ -275,13 +275,13 @@ fun MainScaffold(
             if (tab != 0) HomeBackdrop(Cyan, 0.4f)
             when (tab) {
                 0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
-                1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null, pingMs = vpn.pingMs)
+                1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null, pingMs = vpn.pingMs, onRefresh = vm::refreshAccountNow)
                 else -> AccountScreen(
                     acc = ui.account, english = english, darkMode = darkMode,
                     supportTelegram = ui.supportTelegram,
                     password = remember(ui.account?.username) { com.milad.vpn.data.Repository.session.password },
                     onLanguageChange = onLanguageChange, onDarkModeChange = onDarkModeChange,
-                    onRefresh = vm::refreshAccountNow, onLogout = vm::logout,
+                    onLogout = vm::logout,
                 )
             }
         }
@@ -1114,7 +1114,8 @@ fun Banner(text: String, color: Color) {
 
 // ---------------------------------------------------------------------------------- servers
 @Composable
-fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null, pingMs: Long? = null) {
+fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null, pingMs: Long? = null, onRefresh: () -> Unit = {}) {
+    val context = LocalContext.current
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
@@ -1123,6 +1124,17 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         item {
             ServerDirectoryHeader(ui, english)
             Spacer(Modifier.height(6.dp))
+        }
+        item {
+            AccountSettingsCard {
+                AccountActionRow(
+                    icon = Icons.Filled.Refresh,
+                    title = if (english) "Refresh account" else "به‌روزرسانی حساب",
+                    subtitle = if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب",
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = { vibrate(context); onRefresh() },
+                )
+            }
         }
         item {
             ServerRow(
@@ -1237,7 +1249,6 @@ fun AccountScreen(
     darkMode: Boolean,
     onLanguageChange: (Boolean) -> Unit,
     onDarkModeChange: (Boolean) -> Unit,
-    onRefresh: () -> Unit,
     onLogout: () -> Unit,
     supportTelegram: String = "@Xnetservice2",
     password: String? = null,
@@ -1311,13 +1322,6 @@ fun AccountScreen(
         item {
             AccountSectionTitle(if (english) "Account actions" else "مدیریت حساب", english)
             AccountSettingsCard {
-                AccountActionRow(
-                    icon = Icons.Filled.Refresh,
-                    title = if (english) "Refresh account" else "به‌روزرسانی حساب",
-                    subtitle = if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب",
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = { vibrate(context); onRefresh() },
-                )
                 HorizontalDivider(
                     Modifier.padding(start = 54.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f),
