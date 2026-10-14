@@ -451,12 +451,8 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                 HomeSectionLabel(if (english) "ROUTE" else "مسیر اتصال")
                 Spacer(Modifier.height(7.dp))
                 ServerSelector(flagOf(shown?.country ?: ""), name, details.ifBlank { if (english) "Automatic selection" else "انتخاب خودکار" }, accent, vpn.pingMs?.let { "${Format.num(it)} ms" }, vpn.phase == Phase.CONNECTED, onOpenServers)
-                ui.account?.let {
-                    Spacer(Modifier.height(16.dp))
-                    HomeSectionLabel(if (english) "PLAN" else "اشتراک")
-                    Spacer(Modifier.height(7.dp))
-                    SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
-                }
+                // Temporarily hidden: subscription card on Home.
+                // The subscription logic and SubscriptionStrip implementation remain unchanged.
                 Spacer(Modifier.height(22.dp))
             }
         }
