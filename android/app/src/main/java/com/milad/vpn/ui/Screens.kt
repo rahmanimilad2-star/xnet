@@ -448,13 +448,9 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                     }
                 }
                 Spacer(Modifier.height(18.dp))
-                HomeSectionLabel(if (english) "ROUTE" else "مسیر اتصال")
-                Spacer(Modifier.height(7.dp))
                 ServerSelector(flagOf(shown?.country ?: ""), name, details.ifBlank { if (english) "Automatic selection" else "انتخاب خودکار" }, accent, vpn.pingMs?.let { "${Format.num(it)} ms" }, vpn.phase == Phase.CONNECTED, onOpenServers)
                 ui.account?.let {
                     Spacer(Modifier.height(16.dp))
-                    HomeSectionLabel(if (english) "PLAN" else "اشتراک")
-                    Spacer(Modifier.height(7.dp))
                     SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
                 }
                 Spacer(Modifier.height(22.dp))
@@ -1123,11 +1119,10 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         item { ServerDirectoryHeader(ui, english, connected = connectedId != null) }
         item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
-        item { ServerSectionLabel(if (english) "AUTOMATIC" else "اتصال خودکار", english) }
         item {
             AutoConnectionCard(
                 english = english,
@@ -1135,14 +1130,6 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
                 active = connectedId != null && ui.selectedConfigId < 0,
                 viaName = connectedConfig?.name,
             ) { onSelect(-1) }
-        }
-        if (ui.configs.isNotEmpty()) {
-            item {
-                ServerSectionLabel(
-                    if (english) "AVAILABLE SERVERS · ${localNum(ui.configs.size, english)}" else "سرورهای موجود · ${localNum(ui.configs.size, english)}",
-                    english,
-                )
-            }
         }
         items(ui.configs, key = { it.id }) { c: VpnConfig ->
             ServerRow(
@@ -1462,7 +1449,6 @@ fun AccountScreen(
             AccountScreenHeader(english)
         }
         if (acc != null) {
-            item { AccountSectionTitle(if (english) "Subscription" else "اشتراک", english) }
             item { SubscriptionPanel(acc, password, english) }
         } else {
             item {
@@ -1475,7 +1461,6 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Preferences" else "تنظیمات", english)
             AccountSettingsCard {
                 SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک", subtitle = if (english) "Premium dark interface" else "ظاهر تیره و حرفه‌ای") {
                     Switch(
@@ -1502,12 +1487,10 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
             SupportCard(english, supportTelegram)
         }
 
         item {
-            AccountSectionTitle(if (english) "Account actions" else "مدیریت حساب", english)
             AccountSettingsCard {
                 HorizontalDivider(
                     Modifier.padding(start = 54.dp),
