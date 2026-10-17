@@ -35,64 +35,64 @@ internal val Warn = Color(0xFFF59E0B)
 internal val Bad = Color(0xFFEF4444)
 
 // Shared visual constants used by the redesigned presentation layer.
-internal val XnetSurface = Color(0xFF08111F)
-internal val XnetSurfaceSecondary = Color(0xFF0A1424)
-internal val XnetPrimaryText = Color(0xFFEAF3FF)
-internal val XnetMutedText = Color(0xFF8FA3C7)
+internal val XnetSurface = Color(0xFF101722)
+internal val XnetSurfaceSecondary = Color(0xFF151F2D)
+internal val XnetPrimaryText = Color(0xFFEAF1FA)
+internal val XnetMutedText = Color(0xFF9AAAC0)
 internal val XnetCardShape = RoundedCornerShape(20.dp)
 
 // ------------------------------------------------------------------------------------ schemes
 private val XnetDark = darkColorScheme(
-    primary = Color(0xFF1FA8FF),
-    onPrimary = Color(0xFF02101C),
+    primary = Color(0xFF40B8FF),
+    onPrimary = Color(0xFF061321),
     secondary = BrandDeep,
-    background = Color(0xFF02050C),
-    onBackground = Color(0xFFEAF3FF),
-    surface = Color(0xFF08111F),
-    onSurface = Color(0xFFEAF3FF),
-    surfaceVariant = Color(0xFF0A1424),
-    onSurfaceVariant = Color(0xFF8FA3C7),
-    outline = Color(0xFF18365A),
-    outlineVariant = Color(0xFF122A47),
-    surfaceContainerLowest = Color(0xFF02050C),
-    surfaceContainerLow = Color(0xFF06101D),
-    surfaceContainer = Color(0xFF08111F),
-    surfaceContainerHigh = Color(0xFF0A1424),
-    surfaceContainerHighest = Color(0xFF0D192C),
-    surfaceTint = Color(0xFF1FA8FF),
-    inverseSurface = Color(0xFF0D192C),
-    inverseOnSurface = Color(0xFFEAF3FF),
+    onSecondary = Color.White,
+    tertiary = Cyan,
+    onTertiary = Color(0xFF061321),
+    background = Color(0xFF080D16),
+    onBackground = Color(0xFFEAF1FA),
+    surface = Color(0xFF101722),
+    onSurface = Color(0xFFEAF1FA),
+    surfaceVariant = Color(0xFF151F2D),
+    onSurfaceVariant = Color(0xFF9AAAC0),
+    outline = Color(0xFF29384B),
+    outlineVariant = Color(0xFF1D2939),
+    surfaceContainerLowest = Color(0xFF080D16),
+    surfaceContainerLow = Color(0xFF0D141F),
+    surfaceContainer = Color(0xFF101722),
+    surfaceContainerHigh = Color(0xFF151F2D),
+    surfaceContainerHighest = Color(0xFF1B2737),
+    surfaceTint = Color(0xFF40B8FF),
+    inverseSurface = Color(0xFFEAF1FA),
+    inverseOnSurface = Color(0xFF101722),
     error = Bad,
 )
-
 private val XnetLight = lightColorScheme(
-    // XNET Light-Navy: deeper slate-blue surfaces with readable dark text.
     primary = Color(0xFF168FE3),
     onPrimary = Color.White,
     secondary = Color(0xFF315FE8),
     onSecondary = Color.White,
-    tertiary = Color(0xFF00A6C7),
+    tertiary = Color(0xFF008FAE),
     onTertiary = Color.White,
-    background = Color(0xFF8198B3),
-    onBackground = Color(0xFF0A1424),
-    surface = Color(0xFF9AAFC6),
-    onSurface = Color(0xFF0A1424),
-    surfaceVariant = Color(0xFF879EB8),
-    onSurfaceVariant = Color(0xFF263D57),
-    outline = Color(0xFF536D8B),
-    outlineVariant = Color(0xFF6C84A0),
-    surfaceContainerLowest = Color(0xFFA8BBD0),
-    surfaceContainerLow = Color(0xFFA0B4CA),
-    surfaceContainer = Color(0xFF95ABC3),
-    surfaceContainerHigh = Color(0xFF8BA2BB),
-    surfaceContainerHighest = Color(0xFF7E96B0),
+    background = Color(0xFFF2F5FA),
+    onBackground = Color(0xFF172438),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF172438),
+    surfaceVariant = Color(0xFFEAF0F7),
+    onSurfaceVariant = Color(0xFF53657C),
+    outline = Color(0xFFCBD5E3),
+    outlineVariant = Color(0xFFDDE5EF),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF8FAFD),
+    surfaceContainer = Color(0xFFF1F5FA),
+    surfaceContainerHigh = Color(0xFFEAF0F7),
+    surfaceContainerHighest = Color(0xFFE1E9F3),
     surfaceTint = Color(0xFF168FE3),
-    inverseSurface = Color(0xFF08111F),
-    inverseOnSurface = Color(0xFFEAF3FF),
+    inverseSurface = Color(0xFF101722),
+    inverseOnSurface = Color(0xFFEAF1FA),
     error = Bad,
     onError = Color.White,
 )
-
 @Composable
 fun AppTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = if (darkTheme) XnetDark else XnetLight) {

@@ -76,8 +76,8 @@ import kotlinx.coroutines.delay
 private const val DEVELOPER_NAME = "M.R"
 private const val APP_TITLE = "Xnet"
 
-private val CardShape = RoundedCornerShape(18.dp)
-private val HomeCardShape = RoundedCornerShape(16.dp)
+private val CardShape = RoundedCornerShape(22.dp)
+private val HomeCardShape = RoundedCornerShape(20.dp)
 
 // ---------------------------------------------------------------------------------- haptics
 private var lastVibrationAt = 0L
@@ -159,8 +159,8 @@ fun LoginScreen(loading: Boolean, error: String?, english: Boolean, onLogin: (St
 
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .96f),
-                border = BorderStroke(1.dp, xnetBorder()),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -433,7 +433,7 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                     StatusChip(look.label, english, onDark = true, stateColor = accent)
                 }
                 Spacer(Modifier.height(18.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .72f)).border(1.dp, accent.copy(alpha = .18f), RoundedCornerShape(24.dp)).padding(top = 20.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha = .94f)).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(28.dp)).padding(top = 20.dp, bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (english) "CONNECTION STATUS" else "وضعیت اتصال", color = muted(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                     Spacer(Modifier.height(5.dp))
                     Text(if (english) look.label.uppercase() else look.label, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 2.3.sp else 0.sp)
@@ -451,8 +451,12 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                 HomeSectionLabel(if (english) "ROUTE" else "مسیر اتصال")
                 Spacer(Modifier.height(7.dp))
                 ServerSelector(flagOf(shown?.country ?: ""), name, details.ifBlank { if (english) "Automatic selection" else "انتخاب خودکار" }, accent, vpn.pingMs?.let { "${Format.num(it)} ms" }, vpn.phase == Phase.CONNECTED, onOpenServers)
-                // Temporarily hidden: subscription card on Home.
-                // The subscription logic and SubscriptionStrip implementation remain unchanged.
+                ui.account?.let {
+                    Spacer(Modifier.height(16.dp))
+                    HomeSectionLabel(if (english) "PLAN" else "اشتراک")
+                    Spacer(Modifier.height(7.dp))
+                    SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
+                }
                 Spacer(Modifier.height(22.dp))
             }
         }
@@ -465,7 +469,7 @@ private fun HomeSectionLabel(text: String) { Text(text, Modifier.fillMaxWidth(),
 @Composable
 private fun ServerSelector(flag: String, title: String, sub: String, accent: Color, ping: String?, connected: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
-    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, border = BorderStroke(1.dp, accent.copy(alpha = .32f)), shadowElevation = 0.dp) {
+    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, accent.copy(alpha = .28f)), shadowElevation = 0.dp) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .11f)).border(1.dp, accent.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 20.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) { ping?.let { Text(it, color = muted(), fontSize = 11.sp) }; if (connected) { Box(Modifier.size(6.dp).clip(CircleShape).background(Ok)); Text("LIVE", color = Ok, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) } } }; Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(19.dp)) }
     }
 }
@@ -649,8 +653,8 @@ fun SubscriptionPanel(acc: Account, password: String?, english: Boolean) {
     Surface(
         Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = glassBorder(),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.dp,
     ) {
         Column(Modifier.fillMaxWidth()) {
@@ -1170,7 +1174,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
 @Composable
 private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .92f)).border(1.dp, xnetBorder(), RoundedCornerShape(24.dp)).padding(18.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)).padding(18.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 2.8.sp else 0.sp)
@@ -1208,7 +1212,7 @@ fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, conne
     val border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.85f)) else glassBorder(0.65f)
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface,
         border = border, shadowElevation = 0.dp,
     ) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1390,8 +1394,8 @@ private fun AccountSettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = glassBorder(),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.dp,
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), content = content)
@@ -1444,8 +1448,8 @@ private fun SupportCard(english: Boolean, supportTelegram: String) {
                 if (username.isNotBlank()) uriHandler.openUri("https://t.me/$username")
             },
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = glassBorder(),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 0.dp,
     ) {
         Row(
