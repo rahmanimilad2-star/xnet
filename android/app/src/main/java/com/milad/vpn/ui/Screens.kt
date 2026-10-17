@@ -1114,83 +1114,352 @@ fun Banner(text: String, color: Color) {
 
 // ---------------------------------------------------------------------------------- servers
 @Composable
-fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null, pingMs: Long? = null, onRefresh: () -> Unit = {}) {
-    val context = LocalContext.current
+fun ServersScreen(
+    ui: UiState,
+    english: Boolean,
+    onSelect: (Long) -> Unit,
+    connectedId: Long? = null,
+    pingMs: Long? = null,
+    onRefresh: () -> Unit = {},
+) {
+    val dark = isDarkTheme()
+    val backdrop = if (dark) {
+        listOf(Color(0xFF080D16), Color(0xFF0D1725), Color(0xFF080D16))
+    } else {
+        listOf(Color(0xFFD5DEEA), Color(0xFFE0E7F0), Color(0xFFCCD8E7))
+    }
+
     LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(backdrop)),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             ServerDirectoryHeader(ui, english)
-            Spacer(Modifier.height(6.dp))
         }
+
         item {
-            AccountSettingsCard {
-                AccountActionRow(
-                    icon = Icons.Filled.Refresh,
-                    title = if (english) "Refresh account" else "به‌روزرسانی حساب",
-                    subtitle = if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب",
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = { vibrate(context); onRefresh() },
-                )
-            }
+            ServerRefreshCard(english = english, onRefresh = onRefresh)
         }
+
+        item {
+            Text(
+                if (english) "CONNECTION ROUTE" else "مسیر اتصال",
+                color = muted(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = if (english) 1.8.sp else 0.sp,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 1.dp),
+            )
+        }
+
         item {
             ServerRow(
                 flag = "⚡",
-                title = if (english) "Auto" else "خودکار",
-                sub = if (english) "Best server with automatic failover" else "بهترین سرور + جابه‌جایی خودکار در صورت قطعی",
+                title = if (english) "Automatic" else "اتصال خودکار",
+                sub = if (english) {
+                    "Automatically choose the best available route"
+                } else {
+                    "انتخاب خودکار بهترین مسیر در دسترس"
+                },
                 selected = ui.selectedConfigId < 0,
             ) { onSelect(-1) }
         }
+
+        if (ui.configs.isNotEmpty()) {
+            item {
+                Text(
+                    if (english) "AVAILABLE SERVERS" else "سرورهای موجود",
+                    color = muted(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = if (english) 1.8.sp else 0.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 1.dp),
+                )
+            }
+        }
+
         items(ui.configs, key = { it.id }) { c: VpnConfig ->
             ServerRow(
                 flag = flagOf(c.country),
                 title = c.name,
-                sub = listOf(c.country, c.protocol.uppercase()).filter { it.isNotBlank() }.joinToString(" · "),
+                sub = listOf(c.country, c.protocol.uppercase())
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · "),
                 selected = ui.selectedConfigId == c.id,
-                connectedLabel = if (connectedId == c.id) (if (english) "Connected" else "متصل") else null,
-                pingText = if (connectedId == c.id) pingMs?.let { "${Format.num(it)} ms" } else null,
+                connectedLabel = if (connectedId == c.id) {
+                    if (english) "Connected" else "متصل"
+                } else null,
+                pingText = if (connectedId == c.id) {
+                    pingMs?.let { "${Format.num(it)} ms" }
+                } else null,
             ) { onSelect(c.id) }
         }
+
         if (ui.configs.isEmpty()) {
             item {
-                Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(84.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.CloudOff, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(38.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(24.dp),
+                        )
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp),
+                        )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(14.dp))
                     Text(
-                        ui.blockMessage ?: if (english) "No server available yet" else "فعلاً سروری در دسترس نیست",
-                        color = muted(), textAlign = TextAlign.Center,
+                        ui.blockMessage
+                            ?: if (english) "No servers available" else "فعلاً سروری در دسترس نیست",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        if (english) "Try refreshing your account" else "حساب خود را به‌روزرسانی کنید",
+                        color = muted(),
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
+        }
+
+        item { Spacer(Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun ServerRefreshCard(
+    english: Boolean,
+    onRefresh: () -> Unit,
+) {
+    val context = LocalContext.current
+    val dark = isDarkTheme()
+    val primary = MaterialTheme.colorScheme.primary
+    val shape = RoundedCornerShape(22.dp)
+    val gradient = if (dark) {
+        listOf(Color(0xFF12364D), Color(0xFF17294A), Color(0xFF17233A))
+    } else {
+        listOf(Color(0xFFB9D3E8), Color(0xFFC5D7EA), Color(0xFFD0DCEB))
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .clickable {
+                vibrate(context)
+                onRefresh()
+            },
+        shape = shape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, primary.copy(alpha = if (dark) 0.48f else 0.62f)),
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .background(Brush.linearGradient(gradient))
+                .padding(horizontal = 16.dp, vertical = 17.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(17.dp))
+                    .background(primary.copy(alpha = if (dark) 0.20f else 0.13f))
+                    .border(
+                        1.dp,
+                        primary.copy(alpha = 0.32f),
+                        RoundedCornerShape(17.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = null,
+                    tint = primary,
+                    modifier = Modifier.size(27.dp),
+                )
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Text(
+                    if (english) "Refresh account" else "به‌روزرسانی حساب",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    if (english) {
+                        "Sync your latest account and server details"
+                    } else {
+                        "دریافت آخرین اطلاعات حساب و سرورها"
+                    },
+                    color = muted(),
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = primary,
+                modifier = Modifier.size(25.dp),
+            )
         }
     }
 }
 
 @Composable
 private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
+    val dark = isDarkTheme()
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)).padding(18.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 2.8.sp else 0.sp)
-                Text(if (english) "Choose where your tunnel exits" else "محل خروج تونل را انتخاب کنید", color = muted(), fontSize = 12.sp)
+    val primary = MaterialTheme.colorScheme.primary
+    val shape = RoundedCornerShape(26.dp)
+    val gradient = if (dark) {
+        listOf(Color(0xFF14263B), Color(0xFF101A2B), Color(0xFF111827))
+    } else {
+        listOf(Color(0xFFE8EDF4), Color(0xFFDCE5F0), Color(0xFFD2DEEC))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.linearGradient(gradient))
+            .border(1.dp, primary.copy(alpha = if (dark) 0.32f else 0.52f), shape)
+            .padding(19.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    if (english) "SERVER NETWORK" else "شبکه سرورها",
+                    color = primary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = if (english) 2.2.sp else 0.sp,
+                )
+                Text(
+                    if (english) "Choose your route" else "مسیر اتصال خود را انتخاب کنید",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    if (english) {
+                        "Fast, simple and under your control"
+                    } else {
+                        "ساده، حرفه‌ای و تحت کنترل شما"
+                    },
+                    color = muted(),
+                    fontSize = 12.sp,
+                )
             }
-            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Brand.copy(alpha = .12f)).border(1.dp, Brand.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Public, null, tint = Brand, modifier = Modifier.size(22.dp))
+
+            Spacer(Modifier.width(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(primary.copy(alpha = 0.13f))
+                    .border(1.dp, primary.copy(alpha = 0.30f), RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Public,
+                    contentDescription = null,
+                    tint = primary,
+                    modifier = Modifier.size(29.dp),
+                )
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
-            Spacer(Modifier.width(8.dp))
-            Text(if (english) "${Format.num(ui.configs.size)} routes online" else "${Format.num(ui.configs.size)} مسیر فعال", color = Ok, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Text(selected?.country ?: if (english) "AUTO" else "خودکار", color = muted(), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(15.dp))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.58f))
+                .padding(horizontal = 13.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(Ok),
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    if (english) "${Format.num(ui.configs.size)} servers listed"
+                    else "${Format.num(ui.configs.size)} سرور در فهرست",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    if (english) "Available in your account"
+                    else "قابل انتخاب برای حساب شما",
+                    color = muted(),
+                    fontSize = 10.sp,
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    if (english) "SELECTED" else "انتخاب",
+                    color = muted(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = if (english) 1.sp else 0.sp,
+                )
+                Text(
+                    selected?.country ?: if (english) "AUTO" else "خودکار",
+                    color = primary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
     }
 }
@@ -1199,47 +1468,144 @@ private fun flagOf(country: String): String {
     val code = country.trim().uppercase()
         .takeIf { it.length == 2 && it.all(Char::isLetter) }
         ?: return "🌐"
-
     return code.map { char ->
         String(Character.toChars(0x1F1E6 + (char.code - 'A'.code)))
     }.joinToString("")
 }
 
 @Composable
-fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, pingText: String? = null, onClick: () -> Unit) {
+fun ServerRow(
+    flag: String,
+    title: String,
+    sub: String,
+    selected: Boolean,
+    connectedLabel: String? = null,
+    pingText: String? = null,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
+    val dark = isDarkTheme()
     val primary = MaterialTheme.colorScheme.primary
-    val border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.85f)) else glassBorder(0.65f)
+    val shape = RoundedCornerShape(20.dp)
+    val selectedFill = primary.copy(alpha = if (dark) 0.15f else 0.20f)
+    val outline = if (selected) {
+        BorderStroke(1.5.dp, primary.copy(alpha = 0.92f))
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f))
+    }
+
     Surface(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface,
-        border = border, shadowElevation = 0.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .clickable {
+                vibrate(context)
+                onClick()
+            },
+        shape = shape,
+        color = if (selected) selectedFill else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        border = outline,
+        shadowElevation = if (selected) 2.dp else 0.dp,
     ) {
-        Row(Modifier.padding(horizontal = 15.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(primary.copy(alpha = 0.08f)).border(1.dp, primary.copy(alpha = if (selected) 0.7f else 0.22f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = primary, modifier = Modifier.size(22.dp)) else Text(flag, fontSize = 21.sp)
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(47.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(primary.copy(alpha = if (selected) 0.17f else 0.09f))
+                    .border(
+                        1.dp,
+                        primary.copy(alpha = if (selected) 0.55f else 0.20f),
+                        RoundedCornerShape(15.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (flag == "🌐") {
+                    Icon(
+                        Icons.Filled.Language,
+                        contentDescription = null,
+                        tint = primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                } else {
+                    Text(flag, fontSize = 22.sp)
+                }
             }
+
             Spacer(Modifier.width(13.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotBlank()) Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (selected && connectedLabel == null) Text(if (title == "Auto") (if (flag == "⚡") "FAILOVER ENABLED" else "") else "READY TO CONNECT", color = primary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (sub.isNotBlank()) {
+                    Text(
+                        sub,
+                        color = muted(),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (selected && connectedLabel == null) {
+                    Text(
+                        if (flag == "⚡") {
+                            if (title.equals("Auto", ignoreCase = true)) "AUTO FAILOVER ENABLED" else "انتخاب خودکار فعال"
+                        } else {
+                            " "
+                        },
+                        color = primary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.6.sp,
+                        maxLines = 1,
+                    )
+                }
             }
+
             if (connectedLabel != null) {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
                         Spacer(Modifier.width(5.dp))
-                        Text(connectedLabel, color = Ok, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            connectedLabel,
+                            color = Ok,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                    pingText?.let { Text(it, color = muted(), fontSize = 12.sp) }
+                    pingText?.let {
+                        Text(it, color = muted(), fontSize = 11.sp)
+                    }
                 }
-                Spacer(Modifier.width(10.dp))
             }
-            Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null, tint = if (selected) primary else muted().copy(alpha = 0.55f), modifier = Modifier.size(21.dp))
+
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (selected) primary else muted().copy(alpha = 0.60f),
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }
+
 
 // ---------------------------------------------------------------------------------- account
 @Composable
