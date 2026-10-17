@@ -1113,36 +1113,36 @@ fun Banner(text: String, color: Color) {
 }
 
 // ---------------------------------------------------------------------------------- servers
+/** Persian digits in Persian UI, plain digits in English UI (Format.num always emits Persian digits). */
+private fun localNum(n: Number, english: Boolean): String = if (english) n.toString() else Format.num(n)
+
 @Composable
 fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, connectedId: Long? = null, pingMs: Long? = null, onRefresh: () -> Unit = {}) {
     val context = LocalContext.current
+    val connectedConfig = ui.configs.firstOrNull { it.id == connectedId }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { ServerDirectoryHeader(ui, english, connected = connectedId != null) }
+        item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
+        item { ServerSectionLabel(if (english) "AUTOMATIC" else "اتصال خودکار", english) }
         item {
-            ServerDirectoryHeader(ui, english)
-            Spacer(Modifier.height(6.dp))
+            AutoConnectionCard(
+                english = english,
+                selected = ui.selectedConfigId < 0,
+                active = connectedId != null && ui.selectedConfigId < 0,
+                viaName = connectedConfig?.name,
+            ) { onSelect(-1) }
         }
-        item {
-            AccountSettingsCard {
-                AccountActionRow(
-                    icon = Icons.Filled.Refresh,
-                    title = if (english) "Refresh account" else "به‌روزرسانی حساب",
-                    subtitle = if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب",
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = { vibrate(context); onRefresh() },
+        if (ui.configs.isNotEmpty()) {
+            item {
+                ServerSectionLabel(
+                    if (english) "AVAILABLE SERVERS · ${localNum(ui.configs.size, english)}" else "سرورهای موجود · ${localNum(ui.configs.size, english)}",
+                    english,
                 )
             }
-        }
-        item {
-            ServerRow(
-                flag = "⚡",
-                title = if (english) "Auto" else "خودکار",
-                sub = if (english) "Best server with automatic failover" else "بهترین سرور + جابه‌جایی خودکار در صورت قطعی",
-                selected = ui.selectedConfigId < 0,
-            ) { onSelect(-1) }
         }
         items(ui.configs, key = { it.id }) { c: VpnConfig ->
             ServerRow(
@@ -1151,47 +1151,202 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
                 sub = listOf(c.country, c.protocol.uppercase()).filter { it.isNotBlank() }.joinToString(" · "),
                 selected = ui.selectedConfigId == c.id,
                 connectedLabel = if (connectedId == c.id) (if (english) "Connected" else "متصل") else null,
-                pingText = if (connectedId == c.id) pingMs?.let { "${Format.num(it)} ms" } else null,
+                pingText = if (connectedId == c.id) pingMs?.let { "${localNum(it, english)} ms" } else null,
+                selectedLabel = if (english) "SELECTED" else "انتخاب‌شده",
+                spaced = english,
             ) { onSelect(c.id) }
         }
         if (ui.configs.isEmpty()) {
-            item {
-                Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(84.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.CloudOff, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(38.dp))
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        ui.blockMessage ?: if (english) "No server available yet" else "فعلاً سروری در دسترس نیست",
-                        color = muted(), textAlign = TextAlign.Center,
-                    )
-                }
-            }
+            item { ServersEmptyState(ui, english) }
         }
     }
 }
 
 @Composable
-private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
+private fun ServerSectionLabel(text: String, english: Boolean) {
+    Text(
+        text, Modifier.fillMaxWidth().padding(horizontal = 4.dp), color = muted(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+        // letter-spacing breaks Persian letter joining, so it is only applied to English labels
+        letterSpacing = if (english) 1.6.sp else 0.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Network header: opaque navy gradient in both themes, with routes / selected / status tiles. */
+@Composable
+private fun ServerDirectoryHeader(ui: UiState, english: Boolean, connected: Boolean) {
+    val p = serverPalette()
+    val shape = RoundedCornerShape(26.dp)
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)).padding(18.dp)) {
+    val selectedName = if (ui.selectedConfigId < 0) (if (english) "Auto" else "خودکار") else (selected?.name ?: "—")
+    val onHeader = Color.White
+    val onHeaderMuted = Color(0xFFB9CDE8)
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(Brush.linearGradient(listOf(p.headerStart, p.headerEnd)))
+            .border(1.dp, p.headerBorder, shape)
+            .padding(18.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = MaterialTheme.colorScheme.onSurface, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = if (english) 2.8.sp else 0.sp)
-                Text(if (english) "Choose where your tunnel exits" else "محل خروج تونل را انتخاب کنید", color = muted(), fontSize = 12.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = onHeader, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = if (english) 2.4.sp else 0.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                Text(if (english) "Choose where your tunnel exits" else "محل خروج تونل را انتخاب کنید", color = onHeaderMuted, fontSize = 12.sp)
             }
-            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Brand.copy(alpha = .12f)).border(1.dp, Brand.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Public, null, tint = Brand, modifier = Modifier.size(22.dp))
-            }
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0A3558)).border(1.dp, Cyan.copy(alpha = .55f), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Filled.Public, null, tint = Cyan, modifier = Modifier.size(26.dp)) }
         }
         Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
-            Spacer(Modifier.width(8.dp))
-            Text(if (english) "${Format.num(ui.configs.size)} routes online" else "${Format.num(ui.configs.size)} مسیر فعال", color = Ok, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Text(selected?.country ?: if (english) "AUTO" else "خودکار", color = muted(), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HeaderStat(if (english) "ROUTES" else "مسیرها", localNum(ui.configs.size, english), english, Modifier.weight(1f), Color(0xFF34D399))
+            HeaderStat(if (english) "SELECTED" else "انتخاب‌شده", selectedName, english, Modifier.weight(1.5f), null)
+            HeaderStat(
+                if (english) "STATUS" else "وضعیت",
+                if (connected) (if (english) "Connected" else "متصل") else (if (english) "Idle" else "قطع"),
+                english, Modifier.weight(1.1f), if (connected) Color(0xFF34D399) else Color(0xFF8FA3C0),
+            )
         }
+    }
+}
+
+@Composable
+private fun HeaderStat(label: String, value: String, english: Boolean, modifier: Modifier, dot: Color?) {
+    Column(
+        modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xFF0A1B33)).border(1.dp, Color(0xFF24507F), RoundedCornerShape(14.dp))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Text(label, color = Color(0xFFA9C1E0), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 1.2.sp else 0.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (dot != null) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** Refresh account: solid card, gradient icon tile; the click is forwarded unchanged to onRefresh. */
+@Composable
+private fun RefreshAccountCard(english: Boolean, onClick: () -> Unit) {
+    val p = serverPalette()
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(p.cardSurface).border(1.dp, p.cardBorder, shape)
+            .clickable(role = Role.Button, onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Brand, BrandDeep))),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Filled.Refresh, null, tint = Color.White, modifier = Modifier.size(23.dp)) }
+        Spacer(Modifier.width(13.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                if (english) "Refresh account" else "به‌روزرسانی حساب", color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (english) "Sync your latest account details" else "دریافت آخرین اطلاعات حساب", color = muted(),
+                fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.accent)
+    }
+}
+
+/**
+ * Automatic connection card. Its surface is a solid light-blue (Light) / deep navy-blue (Dark) colour from
+ * [serverPalette], never a translucent tint. [active]/[selected]/[viaName] are plain UI state passed in by
+ * ServersScreen, so no label depends on a translated title string.
+ */
+@Composable
+private fun AutoConnectionCard(english: Boolean, selected: Boolean, active: Boolean, viaName: String?, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val p = serverPalette()
+    val shape = RoundedCornerShape(24.dp)
+    val surface = if (selected) p.autoSurfaceSelected else p.autoSurface
+    val stroke = if (selected) BorderStroke(2.dp, p.autoBorderSelected) else BorderStroke(1.dp, p.autoBorder)
+    val status: String? = when {
+        active -> if (english) "ACTIVE" + (viaName?.let { " · $it" } ?: "") else "فعال" + (viaName?.let { " · $it" } ?: "")
+        selected -> if (english) "FAILOVER ENABLED" else "جابه‌جایی خودکار فعال"
+        else -> null
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(surface).border(stroke, shape)
+            .clickable(role = Role.Button) { vibrate(context); onClick() }.padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Brand, CyanDeep))),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Filled.Bolt, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                if (english) "Automatic connection" else "اتصال خودکار", color = p.autoOnSurface,
+                fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (english) "Best server with automatic failover" else "بهترین سرور + جابه‌جایی خودکار در صورت قطعی",
+                color = p.autoMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            if (status != null) {
+                Row(
+                    Modifier.padding(top = 4.dp).clip(RoundedCornerShape(10.dp)).background(p.autoChip)
+                        .border(1.dp, p.autoBorderSelected.copy(alpha = .6f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(if (active) p.okText else p.accent))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        status, color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        letterSpacing = if (english) 0.8.sp else 0.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Icon(
+            if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null,
+            tint = if (selected) p.autoBorderSelected else p.autoMuted, modifier = Modifier.size(26.dp),
+        )
+    }
+}
+
+/** Empty list: an error card when the backend sent a blockMessage, otherwise the neutral empty state. */
+@Composable
+private fun ServersEmptyState(ui: UiState, english: Boolean) {
+    val p = serverPalette()
+    val isError = ui.blockMessage != null
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(if (isError) p.errSurface else p.cardSurface)
+            .border(1.dp, if (isError) p.errBorder else p.cardBorder, shape).padding(22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(64.dp).clip(CircleShape).background(if (isError) p.errChip else p.iconTile)
+                .border(1.dp, if (isError) p.errBorder else p.cardBorder, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (isError) Icons.Filled.Warning else Icons.Filled.CloudOff, null,
+                tint = if (isError) p.errText else p.accent, modifier = Modifier.size(30.dp),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            ui.blockMessage ?: if (english) "No server available yet" else "فعلاً سروری در دسترس نیست",
+            color = if (isError) p.errText else muted(), fontSize = 14.sp, textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -1206,38 +1361,70 @@ private fun flagOf(country: String): String {
 }
 
 @Composable
-fun ServerRow(flag: String, title: String, sub: String, selected: Boolean, connectedLabel: String? = null, pingText: String? = null, onClick: () -> Unit) {
+fun ServerRow(
+    flag: String, title: String, sub: String, selected: Boolean,
+    connectedLabel: String? = null, pingText: String? = null,
+    selectedLabel: String? = null, spaced: Boolean = false,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
-    val primary = MaterialTheme.colorScheme.primary
-    val border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, primary.copy(alpha = 0.85f)) else glassBorder(0.65f)
-    Surface(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { vibrate(context); onClick() },
-        shape = RoundedCornerShape(18.dp), color = if (selected) primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface,
-        border = border, shadowElevation = 0.dp,
+    val p = serverPalette()
+    val shape = RoundedCornerShape(20.dp)
+    val connected = connectedLabel != null
+    val surface = if (selected) p.selectedSurface else p.cardSurface
+    val stroke = when {
+        connected -> BorderStroke(2.dp, p.okBorder)
+        selected -> BorderStroke(1.5.dp, p.selectedBorder)
+        else -> BorderStroke(1.dp, p.cardBorder)
+    }
+    val accent = if (connected) p.okText else p.accent
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(surface).border(stroke, shape)
+            .clickable(role = Role.Button) { vibrate(context); onClick() }
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.padding(horizontal = 15.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(primary.copy(alpha = 0.08f)).border(1.dp, primary.copy(alpha = if (selected) 0.7f else 0.22f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = primary, modifier = Modifier.size(22.dp)) else Text(flag, fontSize = 21.sp)
-            }
-            Spacer(Modifier.width(13.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotBlank()) Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (selected && connectedLabel == null) Text(if (title == "Auto") (if (flag == "⚡") "FAILOVER ENABLED" else "") else "READY TO CONNECT", color = primary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-            }
-            if (connectedLabel != null) {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
-                        Spacer(Modifier.width(5.dp))
-                        Text(connectedLabel, color = Ok, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    pingText?.let { Text(it, color = muted(), fontSize = 12.sp) }
-                }
-                Spacer(Modifier.width(10.dp))
-            }
-            Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null, tint = if (selected) primary else muted().copy(alpha = 0.55f), modifier = Modifier.size(21.dp))
+        Box(
+            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(p.iconTile)
+                .border(1.dp, if (selected || connected) accent.copy(alpha = 0.75f) else p.cardBorder, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = p.accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 22.sp)
         }
+        Spacer(Modifier.width(13.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            if (sub.isNotBlank()) Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (selected && !connected && selectedLabel != null) {
+                Text(
+                    selectedLabel, color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = if (spaced) 1.2.sp else 0.sp, maxLines = 1,
+                )
+            }
+        }
+        if (connected) {
+            Spacer(Modifier.width(8.dp))
+            Column(
+                Modifier.clip(RoundedCornerShape(12.dp)).background(p.okChip).border(1.dp, p.okBorder.copy(alpha = .6f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 9.dp, vertical = 5.dp),
+                horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(p.okText))
+                    Spacer(Modifier.width(5.dp))
+                    Text(connectedLabel!!, color = p.okText, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+                pingText?.let { Text(it, color = muted(), fontSize = 11.sp, maxLines = 1) }
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Icon(
+            if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null,
+            tint = if (selected) accent else muted().copy(alpha = 0.7f), modifier = Modifier.size(23.dp),
+        )
     }
 }
 

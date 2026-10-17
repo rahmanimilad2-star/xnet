@@ -133,6 +133,45 @@ internal fun xnetGrid() = MaterialTheme.colorScheme.outlineVariant
 @Composable
 internal fun isDarkTheme() = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
+/**
+ * Solid (fully opaque) surfaces for the Servers screen. Every value is a literal ARGB colour, never a
+ * low-alpha overlay, so cards cannot blend into the page background in either theme.
+ */
+internal class ServerPalette(
+    val cardSurface: Color, val cardBorder: Color, val iconTile: Color,
+    val selectedSurface: Color, val selectedBorder: Color, val accent: Color,
+    val autoSurface: Color, val autoSurfaceSelected: Color, val autoBorder: Color, val autoBorderSelected: Color,
+    val autoOnSurface: Color, val autoMuted: Color, val autoChip: Color,
+    val okText: Color, val okBorder: Color, val okChip: Color,
+    val errSurface: Color, val errBorder: Color, val errText: Color, val errChip: Color,
+    val headerStart: Color, val headerEnd: Color, val headerBorder: Color,
+)
+
+private val ServerPaletteDark = ServerPalette(
+    cardSurface = Color(0xFF111C2B), cardBorder = Color(0xFF23344B), iconTile = Color(0xFF192A40),
+    selectedSurface = Color(0xFF0F2438), selectedBorder = Color(0xFF40B8FF), accent = Color(0xFF40B8FF),
+    autoSurface = Color(0xFF0E2440), autoSurfaceSelected = Color(0xFF0F2D52),
+    autoBorder = Color(0xFF245B8F), autoBorderSelected = Color(0xFF22D3FF),
+    autoOnSurface = Color(0xFFEAF1FA), autoMuted = Color(0xFFA9BEDA), autoChip = Color(0xFF0A3558),
+    okText = Color(0xFF34D399), okBorder = Color(0xFF1F9D70), okChip = Color(0xFF0E2B24),
+    errSurface = Color(0xFF2A1518), errBorder = Color(0xFF8E3A3A), errText = Color(0xFFFFB4B4), errChip = Color(0xFF3A1E22),
+    headerStart = Color(0xFF0C2748), headerEnd = Color(0xFF0A1730), headerBorder = Color(0xFF1F4A7A),
+)
+
+private val ServerPaletteLight = ServerPalette(
+    cardSurface = Color(0xFFFFFFFF), cardBorder = Color(0xFFC3D3E6), iconTile = Color(0xFFE6EEF9),
+    selectedSurface = Color(0xFFE4F0FD), selectedBorder = Color(0xFF168FE3), accent = Color(0xFF0B63C8),
+    autoSurface = Color(0xFFD6E8FB), autoSurfaceSelected = Color(0xFFC4DDF8),
+    autoBorder = Color(0xFF6FA8E6), autoBorderSelected = Color(0xFF1565D8),
+    autoOnSurface = Color(0xFF0F2540), autoMuted = Color(0xFF34506F), autoChip = Color(0xFFFFFFFF),
+    okText = Color(0xFF047857), okBorder = Color(0xFF12B76A), okChip = Color(0xFFE1F5EC),
+    errSurface = Color(0xFFFDECEC), errBorder = Color(0xFFE08A8A), errText = Color(0xFF9B1C1C), errChip = Color(0xFFFAD4D4),
+    headerStart = Color(0xFF15427F), headerEnd = Color(0xFF0E2E5C), headerBorder = Color(0xFF2C6AB8),
+)
+
+@Composable
+internal fun serverPalette(): ServerPalette = if (isDarkTheme()) ServerPaletteDark else ServerPaletteLight
+
 /** Shared card outline: a thin cyan-to-blue gradient line. */
 @Composable
 internal fun glassBorder(strength: Float = 1f): BorderStroke {
