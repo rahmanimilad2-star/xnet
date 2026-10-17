@@ -1123,7 +1123,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         item { ServerDirectoryHeader(ui, english, connected = connectedId != null) }
         item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
