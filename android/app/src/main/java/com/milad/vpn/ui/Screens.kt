@@ -981,6 +981,8 @@ fun SubscriptionStrip(
     Surface(
         Modifier
             .fillMaxWidth()
+            .widthIn(max = 340.dp)
+            .wrapContentWidth(Alignment.CenterHorizontally)
             .clip(CardShape)
             .clickable {
                 vibrate(context)
@@ -1119,7 +1121,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(1.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         item { ServerDirectoryHeader(ui, english, connected = connectedId != null) }
         item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
