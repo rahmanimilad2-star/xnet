@@ -453,7 +453,12 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                 ui.account?.let {
                     Spacer(Modifier.height(16.dp))
                     Spacer(Modifier.height(7.dp))
-                    SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
+                    }
                 }
                 Spacer(Modifier.height(22.dp))
             }
@@ -982,7 +987,7 @@ fun SubscriptionStrip(
 
     Surface(
         Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.92f)
             .clip(CardShape)
             .clickable {
                 vibrate(context)
@@ -1122,9 +1127,9 @@ fun ServersScreen(
 ) {
     val dark = isDarkTheme()
     val backdrop = if (dark) {
-        listOf(Color(0xFF080D16), Color(0xFF0D1725), Color(0xFF080D16))
+        listOf(Color(0xFF05080F), Color(0xFF080E17), Color(0xFF05080F))
     } else {
-        listOf(Color(0xFFD5DEEA), Color(0xFFE0E7F0), Color(0xFFCCD8E7))
+        listOf(Color(0xFFE4EAF2), Color(0xFFEDF1F6), Color(0xFFD9E2ED))
     }
 
     LazyColumn(
@@ -1134,10 +1139,6 @@ fun ServersScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            ServerDirectoryHeader(ui, english)
-        }
-
         item {
             ServerRefreshCard(english = english, onRefresh = onRefresh)
         }
@@ -1487,12 +1488,7 @@ fun ServerRow(
                 modifier = Modifier
                     .size(47.dp)
                     .clip(RoundedCornerShape(15.dp))
-                    .background(primary.copy(alpha = if (selected) 0.17f else 0.09f))
-                    .border(
-                        1.dp,
-                        primary.copy(alpha = if (selected) 0.55f else 0.20f),
-                        RoundedCornerShape(15.dp),
-                    ),
+                    .background(primary.copy(alpha = if (selected) 0.17f else 0.09f)),
                 contentAlignment = Alignment.Center,
             ) {
                 if (flag == "🌐") {
