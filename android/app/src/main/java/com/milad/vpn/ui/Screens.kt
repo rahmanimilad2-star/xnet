@@ -981,7 +981,7 @@ fun SubscriptionStrip(
     Surface(
         Modifier
             .fillMaxWidth()
-            .widthIn(max = 340.dp)
+            .widthIn(max = 300.dp)
             .wrapContentWidth(Alignment.CenterHorizontally)
             .clip(CardShape)
             .clickable {
@@ -1123,7 +1123,6 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { ServerDirectoryHeader(ui, english, connected = connectedId != null) }
         item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
         item {
             AutoConnectionCard(
@@ -1147,75 +1146,6 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
         }
         if (ui.configs.isEmpty()) {
             item { ServersEmptyState(ui, english) }
-        }
-    }
-}
-
-@Composable
-private fun ServerSectionLabel(text: String, english: Boolean) {
-    Text(
-        text, Modifier.fillMaxWidth().padding(horizontal = 4.dp), color = muted(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
-        // letter-spacing breaks Persian letter joining, so it is only applied to English labels
-        letterSpacing = if (english) 1.6.sp else 0.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-    )
-}
-
-/** Network header: opaque navy gradient in both themes, with routes / selected / status tiles. */
-@Composable
-private fun ServerDirectoryHeader(ui: UiState, english: Boolean, connected: Boolean) {
-    val p = serverPalette()
-    val shape = RoundedCornerShape(26.dp)
-    val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
-    val selectedName = if (ui.selectedConfigId < 0) (if (english) "Auto" else "خودکار") else (selected?.name ?: "—")
-    val onHeader = Color.White
-    val onHeaderMuted = Color(0xFFB9CDE8)
-    Column(
-        Modifier.fillMaxWidth().clip(shape)
-            .background(Brush.linearGradient(listOf(p.headerStart, p.headerEnd)))
-            .border(1.dp, p.headerBorder, shape)
-            .padding(18.dp),
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    if (english) "NETWORK ROUTES" else "مسیرهای شبکه", color = onHeader, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = if (english) 2.4.sp else 0.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                Text(if (english) "Choose where your tunnel exits" else "محل خروج تونل را انتخاب کنید", color = onHeaderMuted, fontSize = 12.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Box(
-                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0A3558)).border(1.dp, Cyan.copy(alpha = .55f), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Public, null, tint = Cyan, modifier = Modifier.size(26.dp)) }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HeaderStat(if (english) "ROUTES" else "مسیرها", localNum(ui.configs.size, english), english, Modifier.weight(1f), Color(0xFF34D399))
-            HeaderStat(if (english) "SELECTED" else "انتخاب‌شده", selectedName, english, Modifier.weight(1.5f), null)
-            HeaderStat(
-                if (english) "STATUS" else "وضعیت",
-                if (connected) (if (english) "Connected" else "متصل") else (if (english) "Idle" else "قطع"),
-                english, Modifier.weight(1.1f), if (connected) Color(0xFF34D399) else Color(0xFF8FA3C0),
-            )
-        }
-    }
-}
-
-@Composable
-private fun HeaderStat(label: String, value: String, english: Boolean, modifier: Modifier, dot: Color?) {
-    Column(
-        modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xFF0A1B33)).border(1.dp, Color(0xFF24507F), RoundedCornerShape(14.dp))
-            .padding(horizontal = 10.dp, vertical = 9.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Text(label, color = Color(0xFFA9C1E0), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = if (english) 1.2.sp else 0.sp, maxLines = 1)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (dot != null) {
-                Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
-                Spacer(Modifier.width(6.dp))
-            }
-            Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
