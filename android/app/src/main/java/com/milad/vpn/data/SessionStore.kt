@@ -40,6 +40,11 @@ class SessionStore(context: Context) {
         get() = prefs.getLong("selected_config", -1L)
         set(v) = prefs.edit().putLong("selected_config", v).apply()
 
+    /** Last config verified as connected; used only as the first Auto candidate. */
+    var lastSuccessfulConfigId: Long
+        get() = prefs.getLong("last_successful_config", -1L)
+        set(v) = prefs.edit().putLong("last_successful_config", v).apply()
+
     fun saveConfigs(b: ConfigBundle) {
         val arr = JSONArray().apply { b.configs.forEach { put(it.toJson()) } }
         prefs.edit().putString("configs", JSONObject().put("version", b.version).put("sync", b.syncAfterSeconds).put("list", arr).toString()).apply()
