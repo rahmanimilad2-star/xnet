@@ -448,12 +448,10 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                     }
                 }
                 Spacer(Modifier.height(18.dp))
-                HomeSectionLabel(if (english) "ROUTE" else "مسیر اتصال")
                 Spacer(Modifier.height(7.dp))
                 ServerSelector(flagOf(shown?.country ?: ""), name, details.ifBlank { if (english) "Automatic selection" else "انتخاب خودکار" }, accent, vpn.pingMs?.let { "${Format.num(it)} ms" }, vpn.phase == Phase.CONNECTED, onOpenServers)
                 ui.account?.let {
                     Spacer(Modifier.height(16.dp))
-                    HomeSectionLabel(if (english) "PLAN" else "اشتراک")
                     Spacer(Modifier.height(7.dp))
                     SubscriptionStrip(it, ui.subscriptionUsage, english, onOpenAccount)
                 }
@@ -1145,17 +1143,6 @@ fun ServersScreen(
         }
 
         item {
-            Text(
-                if (english) "CONNECTION ROUTE" else "مسیر اتصال",
-                color = muted(),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = if (english) 1.8.sp else 0.sp,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 1.dp),
-            )
-        }
-
-        item {
             ServerRow(
                 flag = "⚡",
                 title = if (english) "Automatic" else "اتصال خودکار",
@@ -1168,19 +1155,6 @@ fun ServersScreen(
             ) { onSelect(-1) }
         }
 
-        if (ui.configs.isNotEmpty()) {
-            item {
-                Text(
-                    if (english) "AVAILABLE SERVERS" else "سرورهای موجود",
-                    color = muted(),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = if (english) 1.8.sp else 0.sp,
-                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 1.dp),
-                )
-            }
-        }
-
         items(ui.configs, key = { it.id }) { c: VpnConfig ->
             ServerRow(
                 flag = flagOf(c.country),
@@ -1189,6 +1163,7 @@ fun ServersScreen(
                     .filter { it.isNotBlank() }
                     .joinToString(" · "),
                 selected = ui.selectedConfigId == c.id,
+                isConnected = connectedId == c.id,
                 pingText = if (connectedId == c.id) {
                     pingMs?.let { "${Format.num(it)} ms" }
                 } else null,
@@ -1476,6 +1451,7 @@ fun ServerRow(
     title: String,
     sub: String,
     selected: Boolean,
+    isConnected: Boolean = false,
     pingText: String? = null,
     onClick: () -> Unit,
 ) {
@@ -1572,9 +1548,9 @@ fun ServerRow(
 
             Spacer(Modifier.width(8.dp))
             Icon(
-                if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                if (isConnected || selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if (selected) primary else muted().copy(alpha = 0.60f),
+                tint = if (isConnected) Ok else if (selected) primary else muted().copy(alpha = 0.60f),
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -1616,7 +1592,6 @@ fun AccountScreen(
             AccountScreenHeader(english)
         }
         if (acc != null) {
-            item { AccountSectionTitle(if (english) "Subscription" else "اشتراک", english) }
             item { SubscriptionPanel(acc, password, english) }
         } else {
             item {
@@ -1629,7 +1604,6 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Preferences" else "تنظیمات", english)
             AccountSettingsCard {
                 SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک", subtitle = if (english) "Premium dark interface" else "ظاهر تیره و حرفه‌ای") {
                     Switch(
@@ -1656,12 +1630,10 @@ fun AccountScreen(
         }
 
         item {
-            AccountSectionTitle(if (english) "Support" else "پشتیبانی", english)
             SupportCard(english, supportTelegram)
         }
 
         item {
-            AccountSectionTitle(if (english) "Account actions" else "مدیریت حساب", english)
             AccountSettingsCard {
                 HorizontalDivider(
                     Modifier.padding(start = 54.dp),
