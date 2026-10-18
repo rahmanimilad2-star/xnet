@@ -1336,8 +1336,17 @@ fun ServerRow(
                     Spacer(Modifier.width(5.dp))
                     Text(connectedLabel!!, color = p.okText, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
-                pingText?.let { Text(it, color = muted(), fontSize = 11.sp, maxLines = 1) }
             }
+        }
+        if (connected && pingText != null) {
+            Spacer(Modifier.width(7.dp))
+            Text(
+                pingText,
+                color = p.okText,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
         }
         Spacer(Modifier.width(10.dp))
         Icon(
