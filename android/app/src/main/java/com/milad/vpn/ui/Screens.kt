@@ -1189,9 +1189,6 @@ fun ServersScreen(
                     .filter { it.isNotBlank() }
                     .joinToString(" · "),
                 selected = ui.selectedConfigId == c.id,
-                connectedLabel = if (connectedId == c.id) {
-                    if (english) "Connected" else "متصل"
-                } else null,
                 pingText = if (connectedId == c.id) {
                     pingMs?.let { "${Format.num(it)} ms" }
                 } else null,
@@ -1479,7 +1476,6 @@ fun ServerRow(
     title: String,
     sub: String,
     selected: Boolean,
-    connectedLabel: String? = null,
     pingText: String? = null,
     onClick: () -> Unit,
 ) {
@@ -1560,23 +1556,9 @@ fun ServerRow(
                     )
                 }
 
-                if (selected && connectedLabel == null) {
-                    Text(
-                        if (flag == "⚡") {
-                            if (title.equals("Auto", ignoreCase = true)) "AUTO FAILOVER ENABLED" else "انتخاب خودکار فعال"
-                        } else {
-                            " "
-                        },
-                        color = primary,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.6.sp,
-                        maxLines = 1,
-                    )
-                }
             }
 
-            if (connectedLabel != null || pingText != null) {
+            if (pingText != null) {
                 Spacer(Modifier.width(8.dp))
                 Column(
                     horizontalAlignment = Alignment.End,
