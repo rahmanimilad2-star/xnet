@@ -456,7 +456,7 @@ class AppVpnService : VpnService() {
 
             // 3) health: is the tunnel actually usable?
             if (now >= nextHealthAt) {
-                val d = tunnelDelay(generation) ?: return null
+                val d = tunnelHealthDelay(generation) ?: return null
                 if (d > 0) {
                     health.success()
                     nextHealthAt = System.currentTimeMillis() + HEALTH_INTERVAL_MS
@@ -719,6 +719,15 @@ class AppVpnService : VpnService() {
         val owned = synchronized(coreLock) { isCurrent(generation) && activeCoreGeneration == generation }
         if (!owned) return@withContext null
         val d = XrayCore.measureDelay()
+        val stillOwned = synchronized(coreLock) { isCurrent(generation) && activeCoreGeneration == generation }
+        if (stillOwned) d else null
+    }
+
+    /** Health-only check with an alternate endpoint; initial connection logic is unchanged. */
+    private suspend fun tunnelHealthDelay(generation: Long): Long? = withContext(Dispatchers.IO) {
+        val owned = synchronized(coreLock) { isCurrent(generation) && activeCoreGeneration == generation }
+        if (!owned) return@withContext null
+        val d = XrayCore.measureHealthDelay()
         val stillOwned = synchronized(coreLock) { isCurrent(generation) && activeCoreGeneration == generation }
         if (stillOwned) d else null
     }

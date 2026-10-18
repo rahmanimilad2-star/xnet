@@ -1576,19 +1576,12 @@ fun ServerRow(
                 }
             }
 
-            if (connectedLabel != null) {
+            if (connectedLabel != null || pingText != null) {
                 Spacer(Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(Ok))
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            connectedLabel,
-                            color = Ok,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
                     pingText?.let {
                         Text(it, color = muted(), fontSize = 11.sp)
                     }

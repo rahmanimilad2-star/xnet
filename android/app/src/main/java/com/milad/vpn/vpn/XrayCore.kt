@@ -60,6 +60,16 @@ object XrayCore {
     }
 
     /**
+     * Periodic health check: use an independent endpoint if the primary
+     * endpoint fails. A successful response from either endpoint is enough.
+     */
+    fun measureHealthDelay(): Long {
+        val primary = measureDelay()
+        if (primary > 0L) return primary
+        return measureDelay("https://cp.cloudflare.com/generate_204")
+    }
+
+    /**
      * Latency of ONE config before connecting: a temporary Xray instance (no TUN, no inbound) dials
      * through exactly this outbound. Independent of the running core, safe to run in parallel.
      * Our package is excluded from the VPN, so probe sockets always use the real network.
