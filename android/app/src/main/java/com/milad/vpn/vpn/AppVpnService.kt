@@ -281,17 +281,44 @@ class AppVpnService : VpnService() {
             if (!switchSelectionToAuto(generation, selected)) return null
         }
 
-        // 4) Auto: probe ALL valid configs, rank by real latency, try in that order
-        if (!updateIfCurrent(generation) { it.copy(phase = phase, detail = "سنجش پینگ ${valid.size} سرور…") }) return null
-        val probes = probeAll(generation, valid) ?: return null
+        // 4) Auto: try the last verified config first, then rank other configs by real latency.
+        val lastId = Repository.session.lastSuccessfulConfigId
+        val preferred = valid.firstOrNull { it.id == lastId }
+
+        if (preferred != null) {
+            Log.i(TAG, "auto: trying last successful config ${preferred.id} first")
+            when (val first = attempt(generation, preferred, phase)) {
+                Attempt.Stale -> return null
+                is Attempt.Connected -> return markConnected(generation, preferred, first.delayMs, version)
+                is Attempt.Failed -> Log.w(TAG, "last successful config failed (${first.error}); probing alternatives")
+            }
+        }
+
+        val alternatives = if (preferred != null) valid.filter { it.id != preferred.id } else valid
+        if (alternatives.isEmpty()) {
+            if (isCurrent(generation)) shutdown(lastFailure ?: "اتصال به سرور برقرار نشد.", null, generation)
+            return null
+        }
+
+        if (!updateIfCurrent(generation) {
+                it.copy(phase = phase, detail = "سنجش پینگ ${alternatives.size} سرور…")
+            }) return null
+
+        val probes = probeAll(generation, alternatives) ?: return null
         val ranked = ServerSelector.rankByLatency(probes)
-        logRanking("initial", probes)
+        logRanking("auto-fallback", probes)
         if (ranked.isEmpty()) {
             shutdown(ServerSelector.describeFailure(probes), null, generation)
             return null
         }
-        return tryInOrder(generation, ranked.map { it.config }, phase, version)
-            ?: run { if (isCurrent(generation)) shutdown(lastFailure ?: "اتصال به هیچ سروری برقرار نشد.", null, generation); null }
+
+        // Prefer all freshly ranked alternatives; retry the previous config only as a final fallback.
+        val candidates = ranked.map { it.config } + listOfNotNull(preferred)
+        return tryInOrder(generation, candidates, phase, version)
+            ?: run {
+                if (isCurrent(generation)) shutdown(lastFailure ?: "اتصال به هیچ سروری برقرار نشد.", null, generation)
+                null
+            }
     }
 
     /** Candidates already ranked by a fresh probe; if none works, run a Full pass once more. */
@@ -368,6 +395,7 @@ class AppVpnService : VpnService() {
     /** CONNECTED is only ever set here, after a successful in-tunnel request. */
     private fun markConnected(generation: Long, cfg: VpnConfig, delayMs: Long, version: String?): Link? {
         val ok = owner.ifCurrent(generation) {
+            Repository.session.lastSuccessfulConfigId = cfg.id
             current = cfg
             VpnState.update {
                 it.copy(

@@ -1121,7 +1121,7 @@ fun ServersScreen(ui: UiState, english: Boolean, onSelect: (Long) -> Unit, conne
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { RefreshAccountCard(english) { vibrate(context); onRefresh() } }
         item {
@@ -1189,7 +1189,7 @@ private fun RefreshAccountCard(english: Boolean, onClick: () -> Unit) {
 private fun AutoConnectionCard(english: Boolean, selected: Boolean, active: Boolean, viaName: String?, onClick: () -> Unit) {
     val context = LocalContext.current
     val p = serverPalette()
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(26.dp)
     val surface = if (selected) p.autoSurfaceSelected else p.autoSurface
     val stroke = if (selected) BorderStroke(2.dp, p.autoBorderSelected) else BorderStroke(1.dp, p.autoBorder)
     val status: String? = when {
@@ -1199,18 +1199,18 @@ private fun AutoConnectionCard(english: Boolean, selected: Boolean, active: Bool
     }
     Row(
         Modifier.fillMaxWidth().clip(shape).background(surface).border(stroke, shape)
-            .clickable(role = Role.Button) { vibrate(context); onClick() }.padding(16.dp),
+            .clickable(role = Role.Button) { vibrate(context); onClick() }.padding(18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Brand, CyanDeep))),
+            Modifier.size(58.dp).clip(RoundedCornerShape(19.dp)).background(Brush.linearGradient(listOf(Brand, CyanDeep))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Filled.Bolt, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 if (english) "Automatic connection" else "اتصال خودکار", color = p.autoOnSurface,
-                fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(
                 if (english) "Best server with automatic failover" else "بهترین سرور + جابه‌جایی خودکار در صورت قطعی",
@@ -1288,24 +1288,24 @@ fun ServerRow(
 ) {
     val context = LocalContext.current
     val p = serverPalette()
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(24.dp)
     val connected = connectedLabel != null
     val surface = if (selected) p.selectedSurface else p.cardSurface
     val stroke = when {
         connected -> BorderStroke(2.dp, p.okBorder)
-        selected -> BorderStroke(1.5.dp, p.selectedBorder)
+        selected -> BorderStroke(2.dp, p.selectedBorder)
         else -> BorderStroke(1.dp, p.cardBorder)
     }
     val accent = if (connected) p.okText else p.accent
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(surface).border(stroke, shape)
+        Modifier.fillMaxWidth().clip(shape).background(Brush.linearGradient(if (selected) listOf(p.selectedSurface, p.cardSurface) else listOf(p.cardSurface, p.cardSurface))).border(stroke, shape)
             .clickable(role = Role.Button) { vibrate(context); onClick() }
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(p.iconTile)
-                .border(1.dp, if (selected || connected) accent.copy(alpha = 0.75f) else p.cardBorder, RoundedCornerShape(14.dp)),
+            Modifier.size(50.dp).clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(if (selected || connected) listOf(p.iconTile, p.selectedSurface) else listOf(p.iconTile, p.cardSurface)))
+                .border(1.dp, if (selected || connected) accent.copy(alpha = 0.75f) else p.cardBorder, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center,
         ) {
             if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = p.accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 22.sp)
@@ -1318,10 +1318,26 @@ fun ServerRow(
             )
             if (sub.isNotBlank()) Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (selected && !connected && selectedLabel != null) {
-                Text(
-                    selectedLabel, color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = if (spaced) 1.2.sp else 0.sp, maxLines = 1,
-                )
+                Row(
+                    Modifier.padding(top = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(p.autoChip)
+                        .border(1.dp, p.selectedBorder.copy(alpha = 0.65f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.CheckCircle, null,
+                        tint = p.accent, modifier = Modifier.size(12.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        selectedLabel, color = p.accent, fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = if (spaced) 1.0.sp else 0.sp,
+                        maxLines = 1,
+                    )
+                }
             }
         }
         if (connected) {
