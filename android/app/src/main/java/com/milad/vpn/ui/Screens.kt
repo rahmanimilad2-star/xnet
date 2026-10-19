@@ -1,5 +1,7 @@
 package com.milad.vpn.ui
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.rotate
 import android.content.Context
 import android.os.Build
 import android.os.SystemClock
@@ -470,13 +472,94 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
 private fun HomeSectionLabel(text: String) { Text(text, Modifier.fillMaxWidth(), color = muted(), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp) }
 
 @Composable
-private fun ServerSelector(flag: String, title: String, sub: String, accent: Color, ping: String?, connected: Boolean, onClick: () -> Unit) {
+private fun ServerSelector(
+    flag: String,
+    title: String,
+    sub: String,
+    accent: Color,
+    ping: String?,
+    connected: Boolean,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
-    Surface(Modifier.fillMaxWidth().heightIn(min = 124.dp).clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, accent.copy(alpha = .28f)), shadowElevation = 0.dp) {
-        Row(Modifier.padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .11f)).border(1.dp, accent.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 20.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) { ping?.let { Text(it, color = muted(), fontSize = 11.sp) }; if (connected) { Box(Modifier.size(6.dp).clip(CircleShape).background(Ok)); Text("LIVE", color = Ok, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) } } }; Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(19.dp)) }
+    val shape = RoundedCornerShape(20.dp)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .clip(shape)
+            .clickable {
+                vibrate(context)
+                onClick()
+            },
+        shape = shape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.28f)),
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(accent.copy(alpha = 0.11f))
+                    .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(13.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (flag == "🌐") {
+                    Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(22.dp))
+                } else {
+                    Text(flag, fontSize = 19.sp)
+                }
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    sub,
+                    color = muted(),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ping?.let { Text(it, color = muted(), fontSize = 10.sp) }
+                    if (connected) {
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(Ok))
+                        Text(
+                            "LIVE",
+                            color = Ok,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                        )
+                    }
+                }
+            }
+
+            Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(18.dp))
+        }
     }
 }
-
 @Composable
 private fun ConnectionOrb(phase: Phase, look: PhaseLook, onClick: () -> Unit, buttonSize: Dp = 250.dp) {
     val context = LocalContext.current
@@ -988,7 +1071,7 @@ fun SubscriptionStrip(
     Surface(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 124.dp)
+            .wrapContentHeight()
             .clip(HomeCardShape)
             .clickable {
                 vibrate(context)
@@ -1001,7 +1084,7 @@ fun SubscriptionStrip(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 9.dp)
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1009,7 +1092,7 @@ fun SubscriptionStrip(
             ) {
                 Box(
                     Modifier
-                        .size(38.dp)
+                        .size(36.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
                             Brush.linearGradient(
@@ -1022,11 +1105,11 @@ fun SubscriptionStrip(
                         Icons.Filled.WorkspacePremium,
                         null,
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(19.dp),
                     )
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(9.dp))
 
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -1052,7 +1135,7 @@ fun SubscriptionStrip(
                     )
                 }
 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(5.dp))
 
                 StatusChip(acc.status, english)
 
@@ -1067,7 +1150,7 @@ fun SubscriptionStrip(
             }
 
             if (hasLimitedVolume) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Box(
                     Modifier
@@ -1089,7 +1172,7 @@ fun SubscriptionStrip(
             }
 
             if (daysText != null) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
 
                 Text(
                     daysText,
@@ -1235,6 +1318,12 @@ private fun ServerRefreshCard(
     val dark = isDarkTheme()
     val primary = MaterialTheme.colorScheme.primary
     val shape = RoundedCornerShape(22.dp)
+    var rotationTarget by remember { mutableStateOf(0f) }
+    val rotation by animateFloatAsState(
+        targetValue = rotationTarget,
+        animationSpec = tween(durationMillis = 650, easing = LinearEasing),
+        label = "refreshRotation",
+    )
     val gradient = if (dark) {
         listOf(Color(0xFF12364D), Color(0xFF17294A), Color(0xFF17233A))
     } else {
@@ -1244,9 +1333,11 @@ private fun ServerRefreshCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .wrapContentHeight()
             .clip(shape)
             .clickable {
                 vibrate(context)
+                rotationTarget += 360f
                 onRefresh()
             },
         shape = shape,
@@ -1257,40 +1348,21 @@ private fun ServerRefreshCard(
         Row(
             modifier = Modifier
                 .background(Brush.linearGradient(gradient))
-                .padding(horizontal = 16.dp, vertical = 17.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(primary.copy(alpha = 0.16f))
-                    .border(
-                        1.dp,
-                        primary.copy(alpha = 0.38f),
-                        CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.Refresh,
-                    contentDescription = null,
-                    tint = primary,
-                    modifier = Modifier.size(27.dp),
-                )
-            }
-
-            Spacer(Modifier.width(14.dp))
-
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
                     if (english) "Refresh account" else "به‌روزرسانی حساب",
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     if (english) {
@@ -1300,14 +1372,31 @@ private fun ServerRefreshCard(
                     },
                     color = muted(),
                     fontSize = 11.sp,
-                    lineHeight = 16.sp,
+                    lineHeight = 15.sp,
                 )
             }
 
+            Spacer(Modifier.width(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(3.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(primary.copy(alpha = 0.16f))
+                    .border(1.dp, primary.copy(alpha = 0.42f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = null,
+                    tint = primary,
+                    modifier = Modifier.size(24.dp).rotate(rotation),
+                )
+            }
         }
     }
 }
-
 @Composable
 private fun ServerDirectoryHeader(ui: UiState, english: Boolean) {
     val dark = isDarkTheme()
