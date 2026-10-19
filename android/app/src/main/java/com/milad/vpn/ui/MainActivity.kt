@@ -40,11 +40,11 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         setContent {
             var english by remember { mutableStateOf(prefs.getBoolean("english", false)) }
-            var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
+            val darkMode = true
             // Draw behind system bars; bar icons follow the in-app dark mode.
             DisposableEffect(darkMode) {
                 val transparent = android.graphics.Color.TRANSPARENT
-                val style = if (darkMode) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+                val style = SystemBarStyle.dark(transparent)
                 this@MainActivity.enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 onDispose { }
             }
@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     english = english,
                     onLanguageChange = { english = it; prefs.edit().putBoolean("english", it).apply() },
                     darkMode = darkMode,
-                    onDarkModeChange = { darkMode = it; prefs.edit().putBoolean("dark_mode", it).apply() },
+                    onDarkModeChange = { /* Dark mode is fixed. */ },
                 )
             }
         }

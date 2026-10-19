@@ -472,7 +472,7 @@ private fun HomeSectionLabel(text: String) { Text(text, Modifier.fillMaxWidth(),
 @Composable
 private fun ServerSelector(flag: String, title: String, sub: String, accent: Color, ping: String?, connected: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
-    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, accent.copy(alpha = .28f)), shadowElevation = 0.dp) {
+    Surface(Modifier.fillMaxWidth().heightIn(min = 124.dp).clip(RoundedCornerShape(20.dp)).clickable { vibrate(context); onClick() }, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, accent.copy(alpha = .28f)), shadowElevation = 0.dp) {
         Row(Modifier.padding(horizontal = 15.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .11f)).border(1.dp, accent.copy(alpha = .36f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { if (flag == "🌐") Icon(Icons.Filled.Language, null, tint = accent, modifier = Modifier.size(23.dp)) else Text(flag, fontSize = 20.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = muted(), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) { ping?.let { Text(it, color = muted(), fontSize = 11.sp) }; if (connected) { Box(Modifier.size(6.dp).clip(CircleShape).background(Ok)); Text("LIVE", color = Ok, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) } } }; Icon(Icons.Filled.Tune, null, tint = accent, modifier = Modifier.size(19.dp)) }
     }
 }
@@ -987,13 +987,14 @@ fun SubscriptionStrip(
 
     Surface(
         Modifier
-            .fillMaxWidth(0.92f)
-            .clip(CardShape)
+            .fillMaxWidth()
+            .heightIn(min = 124.dp)
+            .clip(HomeCardShape)
             .clickable {
                 vibrate(context)
                 onOpen()
             },
-        shape = CardShape,
+        shape = HomeCardShape,
         color = MaterialTheme.colorScheme.surface,
         border = glassBorder(),
     ) {
@@ -1262,12 +1263,12 @@ private fun ServerRefreshCard(
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(17.dp))
-                    .background(primary.copy(alpha = if (dark) 0.20f else 0.13f))
+                    .clip(CircleShape)
+                    .background(primary.copy(alpha = 0.16f))
                     .border(
                         1.dp,
-                        primary.copy(alpha = 0.32f),
-                        RoundedCornerShape(17.dp),
+                        primary.copy(alpha = 0.38f),
+                        CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1303,13 +1304,6 @@ private fun ServerRefreshCard(
                 )
             }
 
-            Spacer(Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = primary,
-                modifier = Modifier.size(25.dp),
-            )
         }
     }
 }
@@ -1601,16 +1595,6 @@ fun AccountScreen(
 
         item {
             AccountSettingsCard {
-                SettingRow(icon = if (darkMode) Icons.Filled.DarkMode else Icons.Filled.LightMode, title = if (english) "Dark mode" else "حالت تاریک", subtitle = if (english) "Premium dark interface" else "ظاهر تیره و حرفه‌ای") {
-                    Switch(
-                        checked = darkMode, onCheckedChange = { vibrate(context); onDarkModeChange(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            uncheckedThumbColor = muted(), uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant, uncheckedBorderColor = MaterialTheme.colorScheme.outline,
-                        ),
-                    )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SettingRow(icon = Icons.Filled.Translate, title = if (english) "Language" else "زبان", subtitle = if (english) "App language and direction" else "زبان و جهت نمایش برنامه") {
                     Segmented(
                         options = listOf("فارسی", "English"),

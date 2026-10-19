@@ -95,7 +95,7 @@ private val XnetLight = lightColorScheme(
 )
 @Composable
 fun AppTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (darkTheme) XnetDark else XnetLight) {
+    MaterialTheme(colorScheme = XnetDark) {
         // Paint the whole window so both modes cover every pixel (behind status/navigation bars too).
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
     }
