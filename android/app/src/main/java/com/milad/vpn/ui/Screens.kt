@@ -80,6 +80,7 @@ private const val APP_TITLE = "Xnet"
 
 private val CardShape = RoundedCornerShape(22.dp)
 private val HomeCardShape = RoundedCornerShape(20.dp)
+private val HomeCardHeight = 96.dp
 
 // ---------------------------------------------------------------------------------- haptics
 private var lastVibrationAt = 0L
@@ -487,7 +488,7 @@ private fun ServerSelector(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
+            .height(HomeCardHeight)
             .clip(shape)
             .clickable {
                 vibrate(context)
@@ -499,7 +500,7 @@ private fun ServerSelector(
         shadowElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -1050,8 +1051,8 @@ fun SubscriptionStrip(
         SubscriptionUsage.Volume.Unknown -> if (english) "Usage not available" else "حجم نامشخص"
         is SubscriptionUsage.Volume.Unlimited -> if (english) "Unlimited volume" else "حجم نامحدود"
         is SubscriptionUsage.Volume.Limited ->
-            if (english) "${Format.bytes(volume.remainingBytes)} remaining of ${Format.bytes(volume.quotaBytes)}"
-            else "${Format.bytes(volume.remainingBytes)} باقی‌مانده از ${Format.bytes(volume.quotaBytes)}"
+            if (english) "\u2066${Format.bytes(volume.remainingBytes)}\u2069 remaining of \u2066${Format.bytes(volume.quotaBytes)}\u2069"
+            else "\u2066${Format.bytes(volume.remainingBytes)}\u2069 باقی‌مانده از \u2066${Format.bytes(volume.quotaBytes)}\u2069"
     }
 
     val daysText = when (time) {
@@ -1071,7 +1072,7 @@ fun SubscriptionStrip(
     Surface(
         Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
+            .height(HomeCardHeight)
             .clip(HomeCardShape)
             .clickable {
                 vibrate(context)
@@ -1083,8 +1084,9 @@ fun SubscriptionStrip(
     ) {
         Column(
             Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 9.dp)
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1092,7 +1094,7 @@ fun SubscriptionStrip(
             ) {
                 Box(
                     Modifier
-                        .size(36.dp)
+                        .size(30.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
                             Brush.linearGradient(
@@ -1119,16 +1121,16 @@ fun SubscriptionStrip(
                     )
 
                     Text(
-                        volumeTitle,
+                        if (volume is SubscriptionUsage.Volume.Limited) "\u2066$volumeTitle\u2069" else volumeTitle,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp,
+                        fontSize = 16.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
 
                     Text(
                         volumeSubtitle,
-                        fontSize = 11.sp,
+                        fontSize = 9.sp,
                         color = muted(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1150,7 +1152,7 @@ fun SubscriptionStrip(
             }
 
             if (hasLimitedVolume) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(3.dp))
 
                 Box(
                     Modifier
@@ -1172,11 +1174,11 @@ fun SubscriptionStrip(
             }
 
             if (daysText != null) {
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(3.dp))
 
                 Text(
                     daysText,
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
                     color = daysColor,
                     maxLines = 1,
                 )
@@ -1329,7 +1331,6 @@ private fun ServerRefreshCard(
     } else {
         listOf(Color(0xFFB9D3E8), Color(0xFFC5D7EA), Color(0xFFD0DCEB))
     }
-
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1345,54 +1346,66 @@ private fun ServerRefreshCard(
         border = BorderStroke(1.dp, primary.copy(alpha = if (dark) 0.48f else 0.62f)),
         shadowElevation = 2.dp,
     ) {
-        Row(
-            modifier = Modifier
-                .background(Brush.linearGradient(gradient))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalLayoutDirection provides
+                androidx.compose.ui.unit.LayoutDirection.Ltr
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    if (english) "Refresh account" else "به‌روزرسانی حساب",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    if (english) {
-                        "Sync your latest account and server details"
-                    } else {
-                        "دریافت آخرین اطلاعات حساب و سرورها"
-                    },
-                    color = muted(),
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(48.dp)
-                    .shadow(3.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(primary.copy(alpha = 0.16f))
-                    .border(1.dp, primary.copy(alpha = 0.42f), CircleShape),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .background(Brush.linearGradient(gradient))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.Filled.Refresh,
-                    contentDescription = null,
-                    tint = primary,
-                    modifier = Modifier.size(24.dp).rotate(rotation),
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    CompositionLocalProvider(
+                        androidx.compose.ui.platform.LocalLayoutDirection provides
+                            if (english) androidx.compose.ui.unit.LayoutDirection.Ltr
+                            else androidx.compose.ui.unit.LayoutDirection.Rtl
+                    ) {
+                        Text(
+                            if (english) "Refresh account" else "به‌روزرسانی حساب",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            if (english) {
+                                "Sync your latest account and server details"
+                            } else {
+                                "دریافت آخرین اطلاعات حساب و سرورها"
+                            },
+                            color = muted(),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .shadow(3.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(primary.copy(alpha = 0.16f))
+                        .border(1.dp, primary.copy(alpha = 0.42f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Refresh,
+                        contentDescription = null,
+                        tint = primary,
+                        modifier = Modifier.size(24.dp).rotate(rotation),
+                    )
+                }
             }
         }
     }
