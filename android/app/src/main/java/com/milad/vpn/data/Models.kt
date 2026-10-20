@@ -2,6 +2,25 @@ package com.milad.vpn.data
 
 import org.json.JSONObject
 
+
+data class Announcement(
+    val id: Long,
+    val title: String,
+    val body: String,
+    val createdAt: Long,
+    val updatedAt: Long,
+) {
+    companion object {
+        fun from(j: JSONObject) = Announcement(
+            id = j.getLong("id"),
+            title = j.optString("title"),
+            body = j.optString("body"),
+            createdAt = j.optLong("created_at"),
+            updatedAt = j.optLong("updated_at"),
+        )
+    }
+}
+
 data class SubscriptionUsage(
     val totalBytes: Long,
     val usedBytes: Long,

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.milad.vpn.data.Account
+import com.milad.vpn.data.Announcement
 import com.milad.vpn.data.ApiException
 import com.milad.vpn.data.Repository
 import com.milad.vpn.data.VpnConfig
@@ -11,6 +12,7 @@ import com.milad.vpn.vpn.AppVpnService
 import com.milad.vpn.vpn.Phase
 import com.milad.vpn.vpn.VpnState
 import com.milad.vpn.vpn.VpnStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,9 @@ data class UiState(
     /** backend code behind [blockMessage] (QUOTA_EXCEEDED / EXPIRED / BLOCKED / NO_CONFIG) */
     val blockCode: String? = null,
     val info: String? = null,
+    val announcements: List<Announcement> = emptyList(),
+    val announcementsLoading: Boolean = false,
+    val announcementsError: String? = null,
 )
 
 private val DENIAL_CODES = setOf("QUOTA_EXCEEDED", "EXPIRED", "BLOCKED", "NO_CONFIG")
@@ -43,9 +48,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val vpn = VpnState.status
     private var syncJob: Job? = null
     private var manualRefreshJob: Job? = null
+    private var announcementsJob: Job? = null
 
     init {
-        if (Repository.isLoggedIn) startSync() else viewModelScope.launch { flushPendingRelease() }
+        if (Repository.isLoggedIn) {
+            startSync()
+            refreshAnnouncements()
+        } else viewModelScope.launch { flushPendingRelease() }
         // the VPN service refreshes /api/v1/configs too (every sync_after_seconds); show its account data
         viewModelScope.launch { Repository.account.collect { a -> if (a != null && _ui.value.loggedIn) _ui.value = _ui.value.copy(account = a) } }
     }
@@ -62,6 +71,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 Repository.session.password = password
                 _ui.value = UiState(loggedIn = true, account = acc)
                 startSync()
+                refreshAnnouncements()
             } catch (e: ApiException) {
                 _ui.value = _ui.value.copy(loading = false, loginError = e.message, loginErrorCode = e.code)
             }
@@ -135,6 +145,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Fetch announcements separately; failures must not interrupt VPN synchronization. */
+    fun refreshAnnouncements() {
+        if (!_ui.value.loggedIn || announcementsJob?.isActive == true) return
+
+        announcementsJob = viewModelScope.launch {
+            _ui.value = _ui.value.copy(
+                announcementsLoading = true,
+                announcementsError = null,
+            )
+            try {
+                val items = Repository.api.announcements()
+                _ui.value = _ui.value.copy(
+                    announcements = items,
+                    announcementsLoading = false,
+                    announcementsError = null,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiException) {
+                if (e.code == "UNAUTHORIZED") {
+                    logout(releaseOnServer = false)
+                } else {
+                    _ui.value = _ui.value.copy(
+                        announcementsLoading = false,
+                        announcementsError = e.message,
+                    )
+                }
+            } catch (e: Exception) {
+                _ui.value = _ui.value.copy(
+                    announcementsLoading = false,
+                    announcementsError = "دریافت اطلاعیه‌ها ناموفق بود.",
+                )
+            }
+        }
+    }
+
     fun selectConfig(id: Long) {
         Repository.session.selectedConfigId = id
         _ui.value = _ui.value.copy(selectedConfigId = id)
@@ -159,6 +205,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val token = if (releaseOnServer) Repository.session.token else null
         AppVpnService.stop(getApplication())
         manualRefreshJob?.cancel()
+        announcementsJob?.cancel()
         syncJob?.cancel()
         Repository.logout()
         _ui.value = UiState(loggedIn = false, configs = emptyList())

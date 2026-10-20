@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.milad.vpn.R
 import com.milad.vpn.data.Account
+import com.milad.vpn.data.Announcement
 import com.milad.vpn.data.VpnConfig
 import com.milad.vpn.vpn.Phase
 import com.milad.vpn.vpn.VpnStatus
@@ -243,6 +244,7 @@ fun MainScaffold(
     onDarkModeChange: (Boolean) -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var showAnnouncements by rememberSaveable { mutableStateOf(false) }
     val vpn by vm.vpn.collectAsStateWithLifecycle()
     val snack = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -267,7 +269,9 @@ fun MainScaffold(
         },
         // xnet-ui-polish-v1: we handle system bars ourselves (edge-to-edge)
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = { XnetBottomBar(tab, english) { index -> if (tab != index) { vibrate(context); tab = index } } },
+        bottomBar = { XnetBottomBar(tab, english) { index ->
+            if (tab != index) { vibrate(context); tab = index; showAnnouncements = false }
+        } },
     ) { pad ->
         Box(
             Modifier.padding(pad).fillMaxSize()
@@ -277,7 +281,28 @@ fun MainScaffold(
         ) {
             if (tab != 0) HomeBackdrop(Cyan, 0.4f)
             when (tab) {
-                0 -> HomeScreen(ui, vpn, english, onOpenServers = { tab = 1 }, onOpenAccount = { tab = 2 }) { vm.toggle(onStartVpn) }
+                0 -> if (showAnnouncements) {
+                    AnnouncementsScreen(
+                        announcements = ui.announcements,
+                        loading = ui.announcementsLoading,
+                        error = ui.announcementsError,
+                        english = english,
+                        onBack = { showAnnouncements = false },
+                        onRefresh = vm::refreshAnnouncements,
+                    )
+                } else {
+                    HomeScreen(
+                        ui = ui, vpn = vpn, english = english,
+                        onOpenServers = { tab = 1 },
+                        onOpenAccount = { tab = 2 },
+                        onToggle = { vm.toggle(onStartVpn) },
+                        announcementCount = ui.announcements.size,
+                        onOpenAnnouncements = {
+                            showAnnouncements = true
+                            vm.refreshAnnouncements()
+                        },
+                    )
+                }
                 1 -> ServersScreen(ui, english, vm::selectConfig, connectedId = if (vpn.phase == Phase.CONNECTED) vpn.configId else null, pingMs = vpn.pingMs, onRefresh = vm::refreshAccountNow)
                 else -> AccountScreen(
                     acc = ui.account, english = english, darkMode = darkMode,
@@ -373,7 +398,14 @@ private fun phaseLook(vpn: VpnStatus, english: Boolean): PhaseLook = if (vpn.pha
 }
 
 @Composable
-fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () -> Unit, onOpenAccount: () -> Unit = {}, onToggle: () -> Unit) {
+fun HomeScreen(
+    ui: UiState, vpn: VpnStatus, english: Boolean,
+    onOpenServers: () -> Unit,
+    onOpenAccount: () -> Unit = {},
+    onToggle: () -> Unit,
+    announcementCount: Int = 0,
+    onOpenAnnouncements: () -> Unit = {},
+) {
     val look = phaseLook(vpn, english)
     val accent by animateColorAsState(look.color, tween(420), label = "homeAccent")
     val selected = ui.configs.firstOrNull { it.id == ui.selectedConfigId }
@@ -433,6 +465,8 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                         }
                     }
 
+                    AnnouncementBell(announcementCount, english, onOpenAnnouncements)
+                    Spacer(Modifier.width(5.dp))
                     StatusChip(look.label, english, onDark = true, stateColor = accent)
                 }
                 Spacer(Modifier.height(18.dp))
@@ -465,6 +499,179 @@ fun HomeScreen(ui: UiState, vpn: VpnStatus, english: Boolean, onOpenServers: () 
                 }
                 Spacer(Modifier.height(22.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun AnnouncementBell(count: Int, english: Boolean, onClick: () -> Unit) {
+    val transition = rememberInfiniteTransition(label = "announcementBell")
+    val angle by transition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "announcementBellAngle",
+    )
+    Box(
+        modifier = Modifier.size(42.dp).clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Notifications,
+            contentDescription = if (english) "Announcements" else "اطلاعیه‌ها",
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(23.dp).rotate(if (count > 0) angle else 0f),
+        )
+        if (count > 0) {
+            Box(
+                modifier = Modifier.align(Alignment.TopEnd)
+                    .defaultMinSize(minWidth = 17.dp, minHeight = 17.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE53935))
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (count > 99) "99+" else count.toString(),
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnouncementsScreen(
+    announcements: List<Announcement>,
+    loading: Boolean,
+    error: String?,
+    english: Boolean,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 20.dp),
+    ) {
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.Filled.ArrowBack,
+                    contentDescription = if (english) "Back" else "بازگشت",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = if (english) "Announcements" else "اطلاعیه‌ها",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onRefresh) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = if (english) "Refresh" else "تازه‌سازی",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        when {
+            loading && announcements.isEmpty() -> Box(
+                Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+            announcements.isEmpty() && error != null -> Column(
+                Modifier.fillMaxWidth().weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = if (english) "Try again" else "تلاش دوباره",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onRefresh).padding(10.dp),
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            announcements.isEmpty() -> Box(
+                Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (english) "No announcements" else "اطلاعیه‌ای وجود ندارد",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(announcements, key = { it.id }) { item ->
+                    AnnouncementCard(item = item, english = english)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnouncementCard(item: Announcement, english: Boolean) {
+    var expanded by rememberSaveable(item.id) { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Column(
+            Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Text(
+                text = item.title.ifBlank { if (english) "Announcement" else "اطلاعیه" },
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = item.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (expanded) {
+                    if (english) "Show less" else "نمایش کمتر"
+                } else {
+                    if (english) "Read more" else "ادامه مطلب"
+                },
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }

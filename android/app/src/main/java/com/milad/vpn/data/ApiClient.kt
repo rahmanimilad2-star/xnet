@@ -110,6 +110,14 @@ class ApiClient(private val baseUrl: String = BuildConfig.API_BASE_URL, private 
         )
     }
 
+    suspend fun announcements(): List<Announcement> {
+        val j = call("GET", "/api/v1/announcements")
+        val arr = j.optJSONArray("announcements") ?: return emptyList()
+        return (0 until arr.length()).map {
+            Announcement.from(arr.getJSONObject(it))
+        }
+    }
+
     suspend fun event(type: String, configId: Long? = null, error: String? = null) {
         val b = JSONObject().put("type", type)
         configId?.let { b.put("config_id", it) }
